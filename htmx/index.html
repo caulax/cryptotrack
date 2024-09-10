@@ -1,0 +1,55 @@
+<html>
+    <head>
+        <title>Crypto Track</title>
+        <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="static/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container">
+            <h1><a href="/" style="color: black; text-decoration: none;">Crypto Track</a></h1>
+
+            <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
+            <a href="/update" class="btn btn-success" role="button">Update</a>
+
+
+            <div hx-ext="ws" ws-connect="ws://127.0.0.1:8080/ws">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Coin name</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Exchange</th>
+                        <th scope="col">Investment in USD</th>
+                        <th scope="col">Purchased Price</th>
+                        <th scope="col">Current Price</th>
+                        <th scope="col">Profit</th>
+                        <th scope="col">Income</th>
+                        <th scope="col">Overall income</th>
+                    </tr>
+                    </thead>
+                    {{ range . }}
+                        <tbody>
+                            <tr>
+                                <th scope="row">{{ .CoinName }}</th>
+                                <td>{{ .Date }}</td>
+                                <td>{{ .ExchangeName }}</td>
+                                <td>{{ .InvestmentInUSD }}</td>
+                                <td>{{ .PurchasePrice }} USD</td>
+                                <td>{{ .CurrentPrice }} USD</td>
+                                <td>{{ .Profit }} %</td>
+                                <td>{{ .Income }} USD</td>
+                                <td>{{ .OverallIncome }} USD</td>
+                            </tr>
+                        </tbody>
+                    {{ end }}
+                </table>
+            </div>
+        </div>
+    </body>
+
+    <script src="static/htmx.min.js"></script>
+    <script src="static/ws.js"></script>
+    <script src="static/bootstrap.bundle.min.js"></script>
+</html>

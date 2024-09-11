@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"cryptotrack/db"
 	"cryptotrack/dto"
 	"cryptotrack/service"
 	"cryptotrack/update"
@@ -178,6 +179,8 @@ func main() {
 		}
 	case "update":
 		update.UpdatePrices()
+	case "migrations":
+		db.InitMigrations()
 	default:
 		fmt.Println("Invalid mode. Use 'server' or 'update'.")
 		os.Exit(1)

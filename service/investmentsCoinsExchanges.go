@@ -4,6 +4,13 @@ import (
 	"cryptotrack/dto"
 )
 
+type OverallInformation struct {
+	AmountInvestmentInUSD            float64
+	AmountIncome                     float64
+	AmountOverallIncome              float64
+	ServiceInvestmentsCoinsExchanges []ServiceInvestmentsCoinsExchanges
+}
+
 type ServiceInvestmentsCoinsExchanges struct {
 	Date            string
 	InvestmentInUSD float64
@@ -38,4 +45,21 @@ func CountProfitIncomeOverallIncome() []ServiceInvestmentsCoinsExchanges {
 
 	}
 	return serviceInvestments
+}
+
+func GetOverallInformation() OverallInformation {
+
+	var overallInformation OverallInformation
+
+	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
+
+	for _, v := range profitIncomeOverallIncome {
+		overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
+		overallInformation.AmountIncome += v.Income
+		overallInformation.AmountOverallIncome += v.OverallIncome
+	}
+
+	overallInformation.ServiceInvestmentsCoinsExchanges = profitIncomeOverallIncome
+
+	return overallInformation
 }

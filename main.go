@@ -41,7 +41,7 @@ func (s *server) addSubscriber(subscriber *subscriber) {
 	s.subscriberMutex.Lock()
 	s.subscribers[subscriber] = struct{}{}
 	s.subscriberMutex.Unlock()
-	fmt.Println("Added subscriber", subscriber)
+	fmt.Println("[INFO] Added subscriber", subscriber)
 }
 
 func (s *server) subscribe(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -78,8 +78,8 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	tableData := service.CountProfitIncomeOverallIncome()
-	fmt.Println(tableData)
+	tableData := service.GetOverallInformation()
+	fmt.Println("[INFO] Overall Info:", tableData)
 	err = t.Execute(w, tableData)
 	if err != nil {
 		fmt.Println(err)

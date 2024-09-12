@@ -17,19 +17,19 @@
             <div hx-ext="ws" ws-connect="ws://:8080/ws">
                 <table class="table">
                     <thead>
-                    <tr>
-                        <th scope="col">Coin name</th>
-                        <th scope="col">Date</th>
-                        <th scope="col">Exchange</th>
-                        <th scope="col">Investment in USD</th>
-                        <th scope="col">Purchased Price</th>
-                        <th scope="col">Current Price</th>
-                        <th scope="col">Profit</th>
-                        <th scope="col">Income</th>
-                        <th scope="col">Overall income</th>
-                    </tr>
+                        <tr>
+                            <th scope="col">Coin name</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Exchange</th>
+                            <th scope="col">Investment</th>
+                            <th scope="col">Purchased Price</th>
+                            <th scope="col">Current Price</th>
+                            <th scope="col">Profit</th>
+                            <th scope="col">Income</th>
+                            <th scope="col">Overall income</th>
+                        </tr>
                     </thead>
-                    {{ range . }}
+                    {{ range .ServiceInvestmentsCoinsExchanges }}
                         <tbody>
                             <tr {{if gt .Profit 0}}class="table-success"{{else if lt .Profit 0}}class="table-primary"{{end}}>
                                 <th scope="row">{{ .CoinName }}</th>
@@ -44,6 +44,32 @@
                             </tr>
                         </tbody>
                     {{ end }}
+                    <tbody>
+                        <tr>
+                            <th></th>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                        <tbody>
+                            <tr>
+                                <th>Overall</th>
+                                <td></td>
+                                <td></td>
+                                <td>{{ printf "%.2f" .AmountInvestmentInUSD }} USD</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td>{{ printf "%.2f" .AmountIncome }} USD</td>
+                                <td>{{ printf "%.2f" .AmountOverallIncome }} USD</td>
+                            </tr>
+                        </tbody>
                 </table>
             </div>
         </div>

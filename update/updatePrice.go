@@ -10,6 +10,8 @@ func UpdatePrices() {
 
 	coins := dto.GetAllCoins()
 
+	fmt.Println("[INFO] Started update coin prices from exchanges")
+
 	for _, coin := range coins {
 
 		var coinPrice float64
@@ -23,7 +25,7 @@ func UpdatePrices() {
 			coinPrice = exchange.GetCoinPriceBingx(coin.Name)
 		}
 
-		fmt.Println(coin.Name, coin.ExchangeId, coinPrice)
+		fmt.Println("[INFO] ", coin.Name, coin.ExchangeId, coinPrice)
 
 		dto.UpdatePriceOfCoinByIdAndExchangeId(
 			dto.GetCoinIdByNameAndExchangeId(

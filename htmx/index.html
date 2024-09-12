@@ -31,7 +31,7 @@
                     </thead>
                     {{ range . }}
                         <tbody>
-                            <tr>
+                            <tr {{if gt .Profit 0}}class="table-success"{{else if lt .Profit 0}}class="table-primary"{{end}}>
                                 <th scope="row">{{ .CoinName }}</th>
                                 <td>{{ .Date }}</td>
                                 <td>{{ .ExchangeName }}</td>
@@ -39,8 +39,8 @@
                                 <td>{{ .PurchasePrice }} USD</td>
                                 <td>{{ .CurrentPrice }} USD</td>
                                 <td>{{ .Profit }} %</td>
-                                <td>{{ .Income }} USD</td>
-                                <td>{{ .OverallIncome }} USD</td>
+                                <td>{{ printf "%.2f" .Income }} USD</td>
+                                <td>{{ printf "%.2f" .OverallIncome }} USD</td>
                             </tr>
                         </tbody>
                     {{ end }}

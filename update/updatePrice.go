@@ -19,6 +19,8 @@ func UpdatePrices() {
 			coinPrice = exchange.GetCoinPriceBinance(coin.Name)
 		case 2:
 			coinPrice = exchange.GetCoinPriceOkx(coin.Name)
+		case 3:
+			coinPrice = exchange.GetCoinPriceBingx(coin.Name)
 		}
 
 		fmt.Println(coin.Name, coin.ExchangeId, coinPrice)

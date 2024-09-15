@@ -10,7 +10,7 @@ type Exchange struct {
 }
 
 func GetExchangeIdByName(exchangeName string) int {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 	result := database.QueryRow("SELECT id FROM exchanges WHERE name = ?", exchangeName)
 
@@ -21,7 +21,7 @@ func GetExchangeIdByName(exchangeName string) int {
 }
 
 func GetAllExchanges() []Exchange {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	result, _ := database.Query("SELECT id, name FROM exchanges")

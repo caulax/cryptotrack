@@ -14,7 +14,7 @@ type Investment struct {
 }
 
 func CreateNewInvestment(coinId int, date time.Time, investmentInUSD float64, purchasePrice float64) {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statement, _ := database.Prepare("INSERT INTO investments (coinId, date, investmentInUSD, purchasePrice) VALUES (?, ?, ?, ?)")
@@ -22,7 +22,7 @@ func CreateNewInvestment(coinId int, date time.Time, investmentInUSD float64, pu
 }
 
 func DeleteInvestmentById(id int) {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statement, _ := database.Prepare("DELETE FROM investments WHERE id = ?")
@@ -30,7 +30,7 @@ func DeleteInvestmentById(id int) {
 }
 
 func GetAllInvestment() []Investment {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	result, _ := database.Query("SELECT id, coinId, date, investmentInUSD, purchasePrice FROM investments")

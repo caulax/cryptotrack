@@ -2,20 +2,21 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func GetSQLiteDBConnection(dbPath string) (*sql.DB, error) {
-	// Open a connection to the SQLite database
+
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, err // Return nil and the error if it fails
+		return nil, fmt.Errorf("failed to open the database: %w", err)
 	}
 
-	// Ping the database to ensure the connection is valid
-	if err := db.Ping(); err != nil {
-		db.Close() // Make sure to close the connection if ping fails
-		return nil, err
+	// Check if the connection is valid
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping the database: %w", err)
 	}
 
 	// Return the database connection

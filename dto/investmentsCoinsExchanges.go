@@ -15,7 +15,7 @@ type InvestmentsCoinsExchanges struct {
 }
 
 func GetInvestmentsCoinsExchanges() []InvestmentsCoinsExchanges {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	result, _ := database.Query(`

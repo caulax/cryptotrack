@@ -2,7 +2,7 @@ package db
 
 func InitMigrations() {
 
-	database, _ := GetSQLiteDBConnection("db.sqlite3")
+	database, _ := GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statementExchanges, _ := database.Prepare(`
@@ -36,7 +36,7 @@ func InitMigrations() {
 	)`)
 
 	statementInvestments.Exec()
-	
+
 	initExchangesData, _ := database.Prepare(`
 	INSERT OR IGNORE INTO exchanges (id, name) VALUES (1, "Binance"), (2, "OKX"), (3, "BingX")`)
 

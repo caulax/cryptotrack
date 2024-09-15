@@ -12,7 +12,7 @@ type Coin struct {
 }
 
 func CreateNewCoin(coinName string, exchangeId int) {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statement, _ := database.Prepare("INSERT INTO coins (name, exchangeId) VALUES (?, ?)")
@@ -20,7 +20,7 @@ func CreateNewCoin(coinName string, exchangeId int) {
 }
 
 func DeleteCoinById(id int) {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statement, _ := database.Prepare("DELETE FROM coins WHERE id = ?")
@@ -28,7 +28,7 @@ func DeleteCoinById(id int) {
 }
 
 func UpdatePriceOfCoinByIdAndExchangeId(id int, price float64, exchangeId int) {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	statement, _ := database.Prepare("UPDATE coins SET price = ? WHERE id = ? AND exchangeId = ?")
@@ -36,7 +36,7 @@ func UpdatePriceOfCoinByIdAndExchangeId(id int, price float64, exchangeId int) {
 }
 
 func GetCoinById(id int) *Coin {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	var c Coin
@@ -48,7 +48,7 @@ func GetCoinById(id int) *Coin {
 }
 
 func GetAllCoins() []Coin {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	result, _ := database.Query("SELECT id, name, price, exchangeId FROM coins")
@@ -64,7 +64,7 @@ func GetAllCoins() []Coin {
 }
 
 func GetCoinIdByNameAndExchangeId(name string, exchangeId int) int {
-	database, _ := db.GetSQLiteDBConnection("db.sqlite3")
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
 	result := database.QueryRow("SELECT id FROM coins WHERE name = ? AND exchangeId = ?", name, exchangeId)

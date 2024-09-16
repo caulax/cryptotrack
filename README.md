@@ -15,5 +15,5 @@ OR
 ```
 ## Cronjobs
 ```
-docker run -rm -v /projects/cryptotrack/db.sqlite3:/srv/db.sqlite3 cryptotrack -mode=update
+docker run --rm -v /projects/cryptotrack/db.sqlite3:/srv/db.sqlite3 cryptotrack -mode=update
 ```

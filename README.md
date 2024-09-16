@@ -1,17 +1,9 @@
 # cryptotrack
 
 ## Started command
-
 ```
-docker build -t cryptotrack .
-
-docker rm -f cryptotrack
-
-docker run -d -v /projects/cryptotrack/db.sqlite3:/srv/db.sqlite3 --name cryptotrack -p 8080:8080 cryptotrack
-```
-OR
-```
-./start.sh
+chmod +x run.sh
+./run.sh
 ```
 ## Cronjobs
 ```

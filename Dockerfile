@@ -9,7 +9,7 @@ ENV CGO_ENABLED=1
 RUN go build -o /build/cryptotrack
 
 
-FROM scratch
+FROM alpine
 
 WORKDIR /srv
 

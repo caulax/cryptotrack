@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine as backend
+FROM golang:1.23-alpine3.20 as backend
 
 ADD . /build
 WORKDIR /build
@@ -9,7 +9,7 @@ ENV CGO_ENABLED=1
 RUN go build -o /build/cryptotrack
 
 
-FROM alpine
+FROM alpine:3.20.3
 
 WORKDIR /srv
 

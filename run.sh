@@ -8,4 +8,4 @@ docker build -t cryptotrack .
 docker rm -f cryptotrack || true
 
 # run project
-docker run -d --restart=always -v /projects/cryptotrack/db.sqlite3:/srv/db.sqlite3 --name cryptotrack -p 8080:8080 cryptotrack
+docker run -d --network=projects --restart=always -v /projects/cryptotrack/db.sqlite3:/srv/db.sqlite3 --name cryptotrack -p 8080:8080 cryptotrack

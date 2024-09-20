@@ -12,9 +12,11 @@ type OverallInformation struct {
 }
 
 type ServiceInvestmentsCoinsExchanges struct {
+	Id              int
 	Date            string
 	InvestmentInUSD float64
 	PurchasePrice   float64
+	Active          bool
 	CoinName        string
 	CurrentPrice    float64
 	ExchangeName    string
@@ -31,9 +33,11 @@ func CountProfitIncomeOverallIncome() []ServiceInvestmentsCoinsExchanges {
 	for _, v := range investments {
 		var sICE ServiceInvestmentsCoinsExchanges
 
+		sICE.Id = v.Id
 		sICE.Date = v.Date.Format("2006-01-02")
 		sICE.InvestmentInUSD = v.InvestmentInUSD
 		sICE.PurchasePrice = v.PurchasePrice
+		sICE.Active = v.Active
 		sICE.CoinName = v.CoinName
 		sICE.CurrentPrice = v.CurrentPrice
 		sICE.ExchangeName = v.ExchangeName
@@ -54,9 +58,11 @@ func GetOverallInformation() OverallInformation {
 	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
 
 	for _, v := range profitIncomeOverallIncome {
-		overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
-		overallInformation.AmountIncome += v.Income
-		overallInformation.AmountOverallIncome += v.OverallIncome
+		if v.Active {
+			overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
+			overallInformation.AmountIncome += v.Income
+			overallInformation.AmountOverallIncome += v.OverallIncome
+		}
 	}
 
 	overallInformation.ServiceInvestmentsCoinsExchanges = profitIncomeOverallIncome

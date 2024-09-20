@@ -27,11 +27,18 @@
                             <th scope="col">Profit</th>
                             <th scope="col">Income</th>
                             <th scope="col">Overall income</th>
+                            <th scope="col">Activate</th>
                         </tr>
                     </thead>
                     {{ range .ServiceInvestmentsCoinsExchanges }}
                         <tbody>
-                            <tr {{if gt .Profit 0}}class="table-success"{{else if lt .Profit 0}}class="table-primary"{{end}}>
+                            <tr {{ if and (gt .Profit 0) (.Active) }}
+                                    class="table-success"
+                                {{ else if and (lt .Profit 0) (.Active) }}
+                                    class="table-primary"
+                                {{ else if not .Active }}
+                                    class="table-active"
+                                {{ end }}>
                                 <th scope="row">{{ .CoinName }}</th>
                                 <td>{{ .Date }}</td>
                                 <td>{{ .ExchangeName }}</td>
@@ -41,12 +48,20 @@
                                 <td>{{ .Profit }} %</td>
                                 <td>{{ printf "%.2f" .Income }} USD</td>
                                 <td>{{ printf "%.2f" .OverallIncome }} USD</td>
+                                <td>
+                                    {{ if .Active }}
+                                        <a href="/deactivate/{{ .Id }}" style="font-size: 10px;" class="btn btn-danger" role="button">X</a>
+                                    {{ else }}
+                                        <a href="/activate/{{ .Id }}" style="font-size: 10px;" class="btn btn-success" role="button">O</a>
+                                    {{ end }}
+                                </td>
                             </tr>
                         </tbody>
                     {{ end }}
                     <tbody>
                         <tr>
                             <th></th>
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -68,6 +83,7 @@
                                 <td></td>
                                 <td>{{ printf "%.2f" .AmountIncome }} USD</td>
                                 <td>{{ printf "%.2f" .AmountOverallIncome }} USD</td>
+                                <td></td>
                             </tr>
                         </tbody>
                 </table>

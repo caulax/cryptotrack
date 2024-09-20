@@ -42,4 +42,9 @@ func InitMigrations() {
 
 	initExchangesData.Exec()
 
+	addActiveToInvestment, _ := database.Prepare(`
+	ALTER TABLE investments ADD COLUMN active BOOLEAN DEFAULT 1;`)
+
+	addActiveToInvestment.Exec()
+
 }

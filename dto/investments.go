@@ -11,6 +11,7 @@ type Investment struct {
 	date            time.Time
 	investmentInUSD float64
 	purchasePrice   float64
+	actve           bool
 }
 
 func CreateNewInvestment(coinId int, date time.Time, investmentInUSD float64, purchasePrice float64) {
@@ -38,9 +39,25 @@ func GetAllInvestment() []Investment {
 	investments := []Investment{}
 	for result.Next() {
 		var i Investment
-		result.Scan(&i.id, &i.coinId, &i.date, &i.investmentInUSD, &i.purchasePrice)
+		result.Scan(&i.id, &i.coinId, &i.date, &i.investmentInUSD, &i.purchasePrice, &i.actve)
 		investments = append(investments, i)
 	}
 
 	return investments
+}
+
+func ActivateInvestementById(id int) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	statement, _ := database.Prepare("UPDATE investments SET active = 1 WHERE id = ?")
+	statement.Exec(id)
+}
+
+func DeactivateInvestementById(id int) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	statement, _ := database.Prepare("UPDATE investments SET active = 0 WHERE id = ?")
+	statement.Exec(id)
 }

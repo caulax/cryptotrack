@@ -141,6 +141,30 @@ func handlerUpdate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func handlerActivateInvestment(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/activate/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	dto.ActivateInvestementById(id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func handlerDectivateInvestment(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/deactivate/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	dto.DeactivateInvestementById(id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func NewServer() *server {
 	s := &server{
 		subscriberMessageBuffer: 10,
@@ -149,6 +173,8 @@ func NewServer() *server {
 
 	fileServer := http.FileServer(http.Dir("./static"))
 	s.mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+	s.mux.HandleFunc("/activate/{id}", handlerActivateInvestment)
+	s.mux.HandleFunc("/deactivate/{id}", handlerDectivateInvestment)
 	s.mux.HandleFunc("/update", handlerUpdate)
 	s.mux.HandleFunc("/add", handlerAddNewCrypto)
 	s.mux.HandleFunc("/", handlerMain)

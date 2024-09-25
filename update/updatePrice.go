@@ -23,6 +23,8 @@ func UpdatePrices() {
 			coinPrice = exchange.GetCoinPriceOkx(coin.Name)
 		case 3:
 			coinPrice = exchange.GetCoinPriceBingx(coin.Name)
+		case 4:
+			coinPrice = exchange.GetCoinPriceBybit(coin.Name)
 		}
 
 		fmt.Println("[INFO] ", coin.Name, coin.ExchangeId, coinPrice)

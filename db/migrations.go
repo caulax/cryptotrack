@@ -38,7 +38,7 @@ func InitMigrations() {
 	statementInvestments.Exec()
 
 	initExchangesData, _ := database.Prepare(`
-	INSERT OR IGNORE INTO exchanges (id, name) VALUES (1, "Binance"), (2, "OKX"), (3, "BingX")`)
+	INSERT OR IGNORE INTO exchanges (id, name) VALUES (1, "Binance"), (2, "OKX"), (3, "BingX"), (4, "Bybit")`)
 
 	initExchangesData.Exec()
 

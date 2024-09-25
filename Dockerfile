@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine3.20 as backend
+FROM golang:1.23-alpine3.20 AS backend
 
 ADD . /build
 WORKDIR /build

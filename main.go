@@ -141,6 +141,21 @@ func handlerUpdate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func handlerArchive(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("htmx/index.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	tableData := service.GetArchiveInformation()
+	fmt.Println("[INFO] Overall Info:", tableData)
+	err = t.Execute(w, tableData)
+	if err != nil {
+		fmt.Println(err)
+		w.Write([]byte(err.Error()))
+	}
+}
+
 func handlerActivateInvestment(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/activate/"):]
 	id, err := strconv.Atoi(idStr)
@@ -175,6 +190,7 @@ func NewServer() *server {
 	s.mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 	s.mux.HandleFunc("/activate/{id}", handlerActivateInvestment)
 	s.mux.HandleFunc("/deactivate/{id}", handlerDectivateInvestment)
+	s.mux.HandleFunc("/archive", handlerArchive)
 	s.mux.HandleFunc("/update", handlerUpdate)
 	s.mux.HandleFunc("/add", handlerAddNewCrypto)
 	s.mux.HandleFunc("/", handlerMain)

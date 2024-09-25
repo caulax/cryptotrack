@@ -57,15 +57,40 @@ func GetOverallInformation() OverallInformation {
 
 	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
 
+	res := []ServiceInvestmentsCoinsExchanges{}
+
 	for _, v := range profitIncomeOverallIncome {
 		if v.Active {
 			overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
 			overallInformation.AmountIncome += v.Income
 			overallInformation.AmountOverallIncome += v.OverallIncome
+			res = append(res, v)
 		}
 	}
 
-	overallInformation.ServiceInvestmentsCoinsExchanges = profitIncomeOverallIncome
+	overallInformation.ServiceInvestmentsCoinsExchanges = res
+
+	return overallInformation
+}
+
+func GetArchiveInformation() OverallInformation {
+
+	var overallInformation OverallInformation
+
+	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
+
+	res := []ServiceInvestmentsCoinsExchanges{}
+
+	for _, v := range profitIncomeOverallIncome {
+		if !v.Active {
+			overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
+			overallInformation.AmountIncome += v.Income
+			overallInformation.AmountOverallIncome += v.OverallIncome
+			res = append(res, v)
+		}
+	}
+
+	overallInformation.ServiceInvestmentsCoinsExchanges = res
 
 	return overallInformation
 }

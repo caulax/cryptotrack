@@ -4,6 +4,7 @@ import (
 	"cryptotrack/dto"
 	"cryptotrack/exchange"
 	"fmt"
+	"time"
 )
 
 func UpdatePrices() {
@@ -36,5 +37,8 @@ func UpdatePrices() {
 			coinPrice,
 			coin.ExchangeId)
 	}
+
+	current_time := time.Now().Local()
+	dto.UpdateMetricLastUpdate(current_time.Format("2006-01-02 15:04:05"))
 
 }

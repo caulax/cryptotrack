@@ -5,10 +5,23 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="static/bootstrap.min.css" rel="stylesheet">
+        <style>
+            #red {
+                color: red;
+            }
+        </style>
     </head>
     <body>
         <div class="container">
-            <h1><a href="/" style="color: black; text-decoration: none;">Crypto Track</a></h1>
+            <div class="container">
+                <div class="row row-cols-auto">
+                    <div class="col" style="padding-left: 0px;">
+                        <a href="/" style="color: black; text-decoration: none; font-size: 45px;">Crypto Track</a>
+                        
+                    </div>
+                    <div class="col" {{if .TimeAlert }}id="red"{{ end }} style="margin-top: auto;margin-bottom: auto;">{{ .LastUpdate }}</div>
+                </div>
+            </div>
 
             <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
             <a href="/update" class="btn btn-success" role="button">Update</a>
@@ -28,10 +41,10 @@
                             <th scope="col">Profit</th>
                             <th scope="col">Income</th>
                             <th scope="col">Overall income</th>
-                            <th scope="col">Activate</th>
+                            <th scope="col">Deactivate</th>
                         </tr>
                     </thead>
-                    {{ range .ServiceInvestmentsCoinsExchanges }}
+                    {{ range .TableData.ServiceInvestmentsCoinsExchanges }}
                         <tbody>
                             <tr {{ if and (gt .Profit 0) (.Active) }}
                                     class="table-success"
@@ -78,12 +91,12 @@
                                 <th>Overall</th>
                                 <td></td>
                                 <td></td>
-                                <td>{{ printf "%.2f" .AmountInvestmentInUSD }} USD</td>
+                                <td>{{ printf "%.2f" .TableData.AmountInvestmentInUSD }} USD</td>
                                 <td></td>
                                 <td></td>
                                 <td></td>
-                                <td>{{ printf "%.2f" .AmountIncome }} USD</td>
-                                <td>{{ printf "%.2f" .AmountOverallIncome }} USD</td>
+                                <td>{{ printf "%.2f" .TableData.AmountIncome }} USD</td>
+                                <td>{{ printf "%.2f" .TableData.AmountOverallIncome }} USD</td>
                                 <td></td>
                             </tr>
                         </tbody>

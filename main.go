@@ -29,6 +29,12 @@ type server struct {
 	subscribers             map[*subscriber]struct{}
 }
 
+type Variables struct {
+	TableData  service.OverallInformation
+	LastUpdate time.Duration
+	TimeAlert  bool
+}
+
 func (s *server) subscriberHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.subscribe(r.Context(), w, r)
 	if err != nil {
@@ -78,9 +84,24 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	diff := service.GetDiffDate()
+
+	timeAlert := false
+
+	if diff > 10*time.Minute {
+		timeAlert = true
+	}
+
 	tableData := service.GetOverallInformation()
 	fmt.Println("[INFO] Overall Info:", tableData)
-	err = t.Execute(w, tableData)
+
+	v := Variables{
+		TableData:  tableData,
+		LastUpdate: diff,
+		TimeAlert:  timeAlert,
+	}
+
+	err = t.Execute(w, &v)
 	if err != nil {
 		fmt.Println(err)
 		w.Write([]byte(err.Error()))
@@ -147,9 +168,25 @@ func handlerArchive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	diff := service.GetDiffDate()
+
+	timeAlert := false
+
+	if diff > 10*time.Minute {
+		timeAlert = true
+	}
+
 	tableData := service.GetArchiveInformation()
 	fmt.Println("[INFO] Overall Info:", tableData)
-	err = t.Execute(w, tableData)
+
+	v := Variables{
+		TableData:  tableData,
+		LastUpdate: diff,
+		TimeAlert:  timeAlert,
+	}
+
+	fmt.Println("[INFO] Overall Info:", tableData)
+	err = t.Execute(w, &v)
 	if err != nil {
 		fmt.Println(err)
 		w.Write([]byte(err.Error()))

@@ -55,4 +55,14 @@ func InitMigrations() {
 
 	addActiveToInvestment.Exec()
 
+	addActiveToCoins, _ := database.Prepare(`
+	ALTER TABLE coins ADD COLUMN active BOOLEAN DEFAULT 1;`)
+
+	addActiveToCoins.Exec()
+
+	addUpdateDateToCoins, _ := database.Prepare(`
+	ALTER TABLE coins ADD COLUMN updateDate date;`)
+
+	addUpdateDateToCoins.Exec()
+
 }

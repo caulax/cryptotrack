@@ -35,6 +35,12 @@ type Variables struct {
 	TimeAlert  bool
 }
 
+type VariablesCoin struct {
+	TableData  []service.CoinsExchanges
+	LastUpdate time.Duration
+	TimeAlert  bool
+}
+
 func (s *server) subscriberHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.subscribe(r.Context(), w, r)
 	if err != nil {
@@ -162,6 +168,36 @@ func handlerUpdate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func handlerCoin(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("htmx/coins.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	diff := service.GetDiffDate()
+
+	timeAlert := false
+
+	if diff > 10*time.Minute {
+		timeAlert = true
+	}
+
+	tableData := service.GetAllCoinsExchangesWithDiffTime()
+	fmt.Println("[INFO] Overall Info:", tableData)
+
+	v := VariablesCoin{
+		TableData:  tableData,
+		LastUpdate: diff,
+		TimeAlert:  timeAlert,
+	}
+
+	err = t.Execute(w, &v)
+	if err != nil {
+		fmt.Println(err)
+		w.Write([]byte(err.Error()))
+	}
+}
+
 func handlerArchive(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("htmx/index.html")
 	if err != nil {
@@ -185,12 +221,35 @@ func handlerArchive(w http.ResponseWriter, r *http.Request) {
 		TimeAlert:  timeAlert,
 	}
 
-	fmt.Println("[INFO] Overall Info:", tableData)
 	err = t.Execute(w, &v)
 	if err != nil {
 		fmt.Println(err)
 		w.Write([]byte(err.Error()))
 	}
+}
+
+func handlerActivateCoin(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/coin/activate/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	dto.ActivateCoinById(id)
+	http.Redirect(w, r, "/coins", http.StatusSeeOther)
+}
+
+func handlerDectivateCoin(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/coin/deactivate/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	dto.DeactivateCoinById(id)
+	http.Redirect(w, r, "/coins", http.StatusSeeOther)
 }
 
 func handlerActivateInvestment(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +286,10 @@ func NewServer() *server {
 	s.mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 	s.mux.HandleFunc("/activate/{id}", handlerActivateInvestment)
 	s.mux.HandleFunc("/deactivate/{id}", handlerDectivateInvestment)
+	s.mux.HandleFunc("/coin/activate/{id}", handlerActivateCoin)
+	s.mux.HandleFunc("/coin/deactivate/{id}", handlerDectivateCoin)
 	s.mux.HandleFunc("/archive", handlerArchive)
+	s.mux.HandleFunc("/coins", handlerCoin)
 	s.mux.HandleFunc("/update", handlerUpdate)
 	s.mux.HandleFunc("/add", handlerAddNewCrypto)
 	s.mux.HandleFunc("/", handlerMain)

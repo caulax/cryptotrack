@@ -1,0 +1,71 @@
+<html>
+    <head>
+        <title>Crypto Track</title>
+        <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="static/bootstrap.min.css" rel="stylesheet">
+        <style>
+            #red {
+                color: red;
+            }
+            .table>:not(:last-child)>:last-child>* {
+                border-bottom-color: #e1e1e1 !important;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="container">
+                <div class="row row-cols-auto">
+                    <div class="col" style="padding-left: 0px;">
+                        <a href="/" style="color: black; text-decoration: none; font-size: 45px;">Crypto Track</a>
+                        
+                    </div>
+                    <div class="col" {{if .TimeAlert }}id="red"{{ end }} style="margin-top: auto;margin-bottom: auto;">{{ .LastUpdate }}</div>
+                </div>
+            </div>
+
+            <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
+            <a href="/update" class="btn btn-success" role="button">Update</a>
+            <a href="/archive" class="btn btn-secondary" role="button">Archive</a>
+
+
+            <div hx-ext="ws" ws-connect="ws://:8080/ws">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Coin name</th>
+                            <th scope="col">Exchange</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Last Update</th>
+                            <th scope="col">Deactivate</th>
+                        </tr>
+                    </thead>
+                    {{ range .TableData }}
+                        <tbody>
+                            <tr>
+                                <th scope="row">{{ .Name }}</th>
+                                <td>{{ .Exchange }}</td>
+                                <td>{{ .Price }}</td>
+                                <td {{if .TimeAlert }}id="red"{{ end }} >{{ .UpdateDate }}</td>
+                                <td>
+                                    {{ if .Active }}
+                                        <a href="/coin/deactivate/{{ .Id }}" style="font-size: 10px;" class="btn btn-danger" role="button">X</a>
+                                    {{ else }}
+                                        <a href="/coin/activate/{{ .Id }}" style="font-size: 10px;" class="btn btn-success" role="button">O</a>
+                                    {{ end }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    {{ end }}
+
+                </table>
+            </div>
+        </div>
+    </body>
+
+    <script src="static/htmx.min.js"></script>
+    <script src="static/ws.js"></script>
+    <script src="static/bootstrap.bundle.min.js"></script>
+</html>

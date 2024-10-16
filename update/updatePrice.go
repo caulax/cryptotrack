@@ -9,7 +9,7 @@ import (
 
 func UpdatePrices() {
 
-	coins := dto.GetAllCoins()
+	coins := dto.GetAllActiveCoins()
 
 	fmt.Println("[INFO] Started update coin prices from exchanges")
 
@@ -28,13 +28,16 @@ func UpdatePrices() {
 			coinPrice = exchange.GetCoinPriceBybit(coin.Name)
 		}
 
-		fmt.Println("[INFO] ", coin.Name, coin.ExchangeId, coinPrice)
+		fmt.Println("[INFO] ", coin.Id, coin.Name, coin.ExchangeId, coinPrice)
 
-		dto.UpdatePriceOfCoinByIdAndExchangeId(
+		coinUpdateTime := time.Now().Local()
+
+		dto.UpdatePriceAndDateOfCoinByIdAndExchangeId(
 			dto.GetCoinIdByNameAndExchangeId(
 				coin.Name,
 				coin.ExchangeId),
 			coinPrice,
+			coinUpdateTime,
 			coin.ExchangeId)
 	}
 

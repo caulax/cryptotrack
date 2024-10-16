@@ -2,6 +2,7 @@ package dto
 
 import (
 	"cryptotrack/db"
+	"time"
 )
 
 type Coin struct {
@@ -9,6 +10,8 @@ type Coin struct {
 	Name       string
 	Price      float64
 	ExchangeId int
+	Active     bool
+	UpdateDate time.Time
 }
 
 func CreateNewCoin(coinName string, exchangeId int) {
@@ -27,12 +30,12 @@ func DeleteCoinById(id int) {
 	statement.Exec(id)
 }
 
-func UpdatePriceOfCoinByIdAndExchangeId(id int, price float64, exchangeId int) {
+func UpdatePriceAndDateOfCoinByIdAndExchangeId(id int, price float64, updateDate time.Time, exchangeId int) {
 	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
-	statement, _ := database.Prepare("UPDATE coins SET price = ? WHERE id = ? AND exchangeId = ?")
-	statement.Exec(price, id, exchangeId)
+	statement, _ := database.Prepare("UPDATE coins SET price = ?, updateDate = ? WHERE id = ? AND exchangeId = ?")
+	statement.Exec(price, updateDate, id, exchangeId)
 }
 
 func GetCoinById(id int) *Coin {
@@ -41,8 +44,8 @@ func GetCoinById(id int) *Coin {
 
 	var c Coin
 
-	result := database.QueryRow("SELECT id, name, price, exchangeId FROM coins WHERE id = ?", id)
-	result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId)
+	result := database.QueryRow("SELECT id, name, price, exchangeId, active, updateDate FROM coins WHERE id = ?", id)
+	result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId, &c.Active, &c.UpdateDate)
 
 	return &c
 }
@@ -51,12 +54,28 @@ func GetAllCoins() []Coin {
 	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
 
-	result, _ := database.Query("SELECT id, name, price, exchangeId FROM coins")
+	result, _ := database.Query("SELECT id, name, price, exchangeId, active, updateDate FROM coins")
 
 	coins := []Coin{}
 	for result.Next() {
 		var c Coin
-		result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId)
+		result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId, &c.Active, &c.UpdateDate)
+		coins = append(coins, c)
+	}
+
+	return coins
+}
+
+func GetAllActiveCoins() []Coin {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	result, _ := database.Query("SELECT id, name, price, exchangeId, active, updateDate FROM coins WHERE active = 1")
+
+	coins := []Coin{}
+	for result.Next() {
+		var c Coin
+		result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId, &c.Active, &c.UpdateDate)
 		coins = append(coins, c)
 	}
 
@@ -73,4 +92,20 @@ func GetCoinIdByNameAndExchangeId(name string, exchangeId int) int {
 	result.Scan(&id)
 
 	return id
+}
+
+func ActivateCoinById(id int) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	statement, _ := database.Prepare("UPDATE coins SET active = 1 WHERE id = ?")
+	statement.Exec(id)
+}
+
+func DeactivateCoinById(id int) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	statement, _ := database.Prepare("UPDATE coins SET active = 0 WHERE id = ?")
+	statement.Exec(id)
 }

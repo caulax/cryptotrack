@@ -1,17 +1,45 @@
 package exchange
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
 const (
 	okxApiUrl = "https://www.okx.com/api/v5/market/ticker?instId=%s-USDT" // BTC-USDT
+
+	baseURL     = "https://www.okx.com"
+	apiEndpoint = "/api/v5/account/balance"
 )
+
+type OkxCredentials struct {
+	ApiKey     string `toml:"apiKey"`
+	SecretKey  string `toml:"secretKey"`
+	Passphrase string `toml:"passphrase"`
+}
+
+func LoadOkxCredentials(filePath string) (*OkxCredentials, error) {
+	var okxCredentials OkxCredentials
+	_, err := toml.DecodeFile(filePath, &struct {
+		Okx *OkxCredentials `toml:"okx"`
+	}{Okx: &okxCredentials})
+	if err != nil {
+		return nil, err
+	}
+
+	return &okxCredentials, nil
+}
 
 // Struct to map the JSON response from OKX
 type OKXResponse struct {
@@ -74,3 +102,161 @@ func GetCoinPriceOkx(coinName string) float64 {
 	coinPrice, _ := strconv.ParseFloat(okxResponse.Data[0].Last, 64)
 	return coinPrice
 }
+
+type AccountBalance struct {
+	Code string `json:"code"`
+	Data []struct {
+		Details []struct {
+			Currency string `json:"ccy"`
+			Balance  string `json:"cashBal"`
+		} `json:"details"`
+	} `json:"data"`
+}
+
+type AccountBalanceResult struct {
+	Currency    string
+	Balance     float64
+	BalanceUSDT float64
+}
+
+type EarnBalance struct {
+	Code string `json:"code"`
+	Data []struct {
+		Currency string `json:"ccy"`
+		Amount   string `json:"amt"`
+	} `json:"data"`
+}
+
+func updateBalanceOkx(balanceRes *[]AccountBalanceResult, currency string, newBalance float64, newBalanceUSDT float64) {
+	// Loop through the slice to find the currency
+	for i, bal := range *balanceRes {
+		if bal.Currency == currency {
+			// Update the Balance and BalanceUSDT
+			(*balanceRes)[i].Balance = (*balanceRes)[i].Balance + newBalance
+			(*balanceRes)[i].BalanceUSDT = (*balanceRes)[i].BalanceUSDT + newBalanceUSDT
+			return
+		}
+	}
+
+	// If currency not found, append a new entry
+	*balanceRes = append(*balanceRes, AccountBalanceResult{
+		Currency:    currency,
+		Balance:     newBalance,
+		BalanceUSDT: newBalanceUSDT,
+	})
+}
+
+// generateSignature creates a signature for OKX API authentication
+func generateSignature(timestamp, method, endpoint, body string) string {
+	config, _ := LoadOkxCredentials("config.toml")
+
+	signatureString := timestamp + method + endpoint + body
+	h := hmac.New(sha256.New, []byte(config.SecretKey))
+	h.Write([]byte(signatureString))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+// getRequest performs a GET request to the specified OKX endpoint
+func getRequest(endpoint string) (*http.Response, error) {
+	config, _ := LoadOkxCredentials("config.toml")
+
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	signature := generateSignature(timestamp, "GET", endpoint, "")
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", baseURL+endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set headers for authentication
+	req.Header.Add("OK-ACCESS-KEY", config.ApiKey)
+	req.Header.Add("OK-ACCESS-SIGN", signature)
+	req.Header.Add("OK-ACCESS-TIMESTAMP", timestamp)
+	req.Header.Add("OK-ACCESS-PASSPHRASE", config.Passphrase)
+	req.Header.Add("Content-Type", "application/json")
+
+	return client.Do(req)
+}
+
+// getTradingBalance fetches and prints trading account balance
+func GetWalletBalanceOkx() []AccountBalanceResult {
+
+	resp, err := getRequest("/api/v5/account/balance")
+	if err != nil {
+		fmt.Println("Error fetching trading balance:", err)
+	}
+	defer resp.Body.Close()
+
+	var balance AccountBalance
+	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
+		fmt.Println("Error decoding trading balance:", err)
+	}
+
+	var balanceRes []AccountBalanceResult
+	for _, data := range balance.Data {
+		for _, detail := range data.Details {
+
+			balance64, _ := strconv.ParseFloat(strings.TrimSpace(detail.Balance), 64)
+
+			if detail.Currency == "USDT" {
+				updateBalanceOkx(&balanceRes, detail.Currency, balance64, balance64)
+			} else {
+				coinPrice := GetCoinPriceOkx(detail.Currency)
+				balanceUSDT := balance64 * coinPrice
+				if balanceUSDT > 0.1 {
+					updateBalanceOkx(&balanceRes, detail.Currency, balance64, balanceUSDT)
+				}
+			}
+		}
+	}
+
+	respEarnFlex, err := getRequest("/api/v5/finance/savings/balance")
+	if err != nil {
+		fmt.Println("Error fetching earn balance:", err)
+	}
+	defer respEarnFlex.Body.Close()
+
+	var balanceEarn EarnBalance
+	if err := json.NewDecoder(respEarnFlex.Body).Decode(&balanceEarn); err != nil {
+		fmt.Println("Error decoding earn balance:", err)
+	}
+
+	if len(balanceEarn.Data) > 0 {
+		for _, data := range balanceEarn.Data {
+			balanceEarn64, _ := strconv.ParseFloat(strings.TrimSpace(data.Amount), 64)
+			updateBalanceOkx(&balanceRes, data.Currency, balanceEarn64, balanceEarn64)
+		}
+	}
+
+	return balanceRes
+}
+
+// type FundingBalance struct {
+// 	Code string `json:"code"`
+// 	Data []struct {
+// 		Currency string `json:"ccy"`
+// 		Balance  string `json:"bal"`
+// 	} `json:"data"`
+// }
+
+// // getFundingBalance fetches and prints funding account balance
+// func GetFundingBalance() {
+// 	resp, err := getRequest("/api/v5/asset/balances")
+// 	if err != nil {
+// 		fmt.Println("Error fetching funding balance:", err)
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	var balance FundingBalance
+// 	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
+// 		fmt.Println("Error decoding funding balance:", err)
+// 		return
+// 	}
+
+// 	fmt.Println("Funding Account Balance:")
+// 	for _, data := range balance.Data {
+// 		fmt.Printf("Currency: %s, Balance: %s\n", data.Currency, data.Balance)
+// 	}
+// }

@@ -30,9 +30,12 @@ type server struct {
 }
 
 type Variables struct {
-	TableData  service.OverallInformation
-	LastUpdate time.Duration
-	TimeAlert  bool
+	TableData         service.OverallInformation
+	TableDataBalance  []service.BalanceOverallTable
+	LastUpdate        time.Duration
+	TimeAlert         bool
+	LastUpdateBalance time.Duration
+	TimeAlertBalance  bool
 }
 
 type VariablesCoin struct {
@@ -90,21 +93,21 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	diff := service.GetDiffDate()
+	diff, timeAlert := service.GetDiffDate()
+	diffBalance, timeAlertBalance := service.GetDiffDateBalance()
 
-	timeAlert := false
-
-	if diff > 10*time.Minute {
-		timeAlert = true
-	}
+	balanceOverall := service.GetAllBalancesWithDiff()
 
 	tableData := service.GetOverallInformation()
 	fmt.Println("[INFO] Overall Info:", tableData)
 
 	v := Variables{
-		TableData:  tableData,
-		LastUpdate: diff,
-		TimeAlert:  timeAlert,
+		TableData:         tableData,
+		TableDataBalance:  balanceOverall,
+		LastUpdate:        diff,
+		TimeAlert:         timeAlert,
+		LastUpdateBalance: diffBalance,
+		TimeAlertBalance:  timeAlertBalance,
 	}
 
 	err = t.Execute(w, &v)
@@ -174,13 +177,7 @@ func handlerCoin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	diff := service.GetDiffDate()
-
-	timeAlert := false
-
-	if diff > 10*time.Minute {
-		timeAlert = true
-	}
+	diff, timeAlert := service.GetDiffDate()
 
 	tableData := service.GetAllCoinsExchangesWithDiffTime()
 	fmt.Println("[INFO] Overall Info:", tableData)
@@ -204,13 +201,7 @@ func handlerArchive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	diff := service.GetDiffDate()
-
-	timeAlert := false
-
-	if diff > 10*time.Minute {
-		timeAlert = true
-	}
+	diff, timeAlert := service.GetDiffDate()
 
 	tableData := service.GetArchiveInformation()
 	fmt.Println("[INFO] Overall Info:", tableData)
@@ -318,10 +309,22 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-	case "update":
+	case "updatePrices":
 		update.UpdatePrices()
+	case "updateBalance":
+		update.UpdateBalance("minute")
+	case "updateBalanceHourly":
+		update.UpdateBalance("hourly")
+	case "updateBalanceDaily":
+		update.UpdateBalance("daily")
 	case "migrations":
 		db.InitMigrations()
+	// case "test":
+	// // fmt.Println("OKX: ", exchange.GetWalletBalanceOkx())
+	// // fmt.Println("GATEIO: ", exchange.GetWalletBalanceGateio())
+	// // fmt.Println("BYBIT: ", exchange.GetWalletBalanceBybit())
+	// // fmt.Println(dto.GetLatestOverallBalanceByTiming("minute"))
+	// // fmt.Println(service.GetAllBalancesWithDiff())
 	default:
 		fmt.Println("Invalid mode. Use 'server' or 'update'.")
 		os.Exit(1)

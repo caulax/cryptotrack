@@ -1,17 +1,37 @@
 package exchange
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/BurntSushi/toml"
+	bybit "github.com/wuhewuhe/bybit.go.api"
 )
 
 const (
 	bybitApiUrl = "https://api.bybit.com/v5/market/tickers?category=spot&symbol=%sUSDT" // BTCUSDT
 )
+
+type BybitCredentials struct {
+	ApiKey    string `toml:"apiKey"`
+	SecretKey string `toml:"secretKey"`
+}
+
+func LoadBybitCredentials(filePath string) (*BybitCredentials, error) {
+	var bybitCredentials BybitCredentials
+	_, err := toml.DecodeFile(filePath, &struct {
+		ByBit *BybitCredentials `toml:"bybit"`
+	}{ByBit: &bybitCredentials})
+	if err != nil {
+		return nil, err
+	}
+	return &bybitCredentials, nil
+}
 
 type BybitTickerResponse struct {
 	RetCode    int        `json:"retCode"`
@@ -76,7 +96,6 @@ func GetCoinPriceBybit(coinName string) float64 {
 	if len(bybitResponse.Result.List) > 0 {
 		// Access the bid1Price field from the first element of the list
 		bid1Price = bybitResponse.Result.List[0].Bid1Price
-		fmt.Printf("The bid1Price for %s is: %s\n", bybitResponse.Result.List[0].Symbol, bid1Price)
 	} else {
 		fmt.Println("No ticker data available.")
 	}
@@ -86,4 +105,93 @@ func GetCoinPriceBybit(coinName string) float64 {
 	returnValue, _ = strconv.ParseFloat(bid1Price, 64)
 
 	return returnValue
+}
+
+type AccountBalanceResultBybit struct {
+	Currency    string
+	Balance     float64
+	BalanceUSDT float64
+}
+
+func updateBalanceBybit(balanceRes *[]AccountBalanceResultBybit, currency string, newBalance float64, newBalanceUSDT float64) {
+	// Loop through the slice to find the currency
+	for i, bal := range *balanceRes {
+		if bal.Currency == currency {
+			// Update the Balance and BalanceUSDT
+			(*balanceRes)[i].Balance = (*balanceRes)[i].Balance + newBalance
+			(*balanceRes)[i].BalanceUSDT = (*balanceRes)[i].BalanceUSDT + newBalanceUSDT
+			return
+		}
+	}
+
+	// If currency not found, append a new entry
+	*balanceRes = append(*balanceRes, AccountBalanceResultBybit{
+		Currency:    currency,
+		Balance:     newBalance,
+		BalanceUSDT: newBalanceUSDT,
+	})
+}
+
+func GetWalletBalanceBybit() []AccountBalanceResultBybit {
+	config, _ := LoadBybitCredentials("config.toml")
+
+	client := bybit.NewBybitHttpClient(config.ApiKey, config.SecretKey, bybit.WithBaseURL(bybit.MAINNET))
+
+	paramsUnifiedAccount := map[string]interface{}{"accountType": "UNIFIED"}
+	accountResultUnified, _ := client.NewUtaBybitServiceWithParams(paramsUnifiedAccount).GetAccountWallet(context.Background())
+
+	var balanceRes []AccountBalanceResultBybit
+
+	if resultSlice, ok := accountResultUnified.Result.(map[string]interface{}); ok {
+		if list, ok := resultSlice["list"].([]interface{}); ok {
+			for _, account := range list {
+				if accountMap, ok := account.(map[string]interface{}); ok {
+					if coins, ok := accountMap["coin"].([]interface{}); ok {
+						for _, coin := range coins {
+							if coinMap, ok := coin.(map[string]interface{}); ok {
+								usdValueStr, _ := coinMap["usdValue"].(string)
+								usdValueFloat, _ := strconv.ParseFloat(usdValueStr, 64)
+								if usdValueFloat > 0.1 {
+
+									walletBalanceStr, _ := coinMap["walletBalance"].(string)
+									walletBalanceFloat, _ := strconv.ParseFloat(walletBalanceStr, 64)
+
+									updateBalanceBybit(&balanceRes, coinMap["coin"].(string), walletBalanceFloat, usdValueFloat)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	paramsFundAccount := map[string]interface{}{"accountType": "FUND"}
+	accountResultFund, _ := client.NewUtaBybitServiceWithParams(paramsFundAccount).GetAllCoinsBalance(context.Background())
+
+	if resultSlice, ok := accountResultFund.Result.(map[string]interface{}); ok {
+		if list, ok := resultSlice["balance"].([]interface{}); ok {
+			for _, account := range list {
+
+				if accountMap, ok := account.(map[string]interface{}); ok {
+
+					currency := accountMap["coin"].(string)
+					walletBalanceStr, _ := accountMap["walletBalance"].(string)
+					walletBalanceFloat, _ := strconv.ParseFloat(walletBalanceStr, 64)
+
+					if currency == "USDT" {
+						updateBalanceBybit(&balanceRes, currency, walletBalanceFloat, walletBalanceFloat)
+					} else {
+						coinPrice := GetCoinPriceBybit(currency)
+						balanceUSDT := walletBalanceFloat * coinPrice
+						if balanceUSDT > 0.1 {
+							updateBalanceBybit(&balanceRes, currency, walletBalanceFloat, balanceUSDT)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return balanceRes
 }

@@ -65,4 +65,21 @@ func InitMigrations() {
 
 	addUpdateDateToCoins.Exec()
 
+	statementBalances, _ := database.Prepare(`
+	CREATE TABLE IF NOT EXISTS balances (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		currency TEXT,
+		balance REAL,
+		balanceUSDT REAL,
+		exchangeId INTEGER,
+		date date,
+		timing TEXT
+	)`)
+
+	statementBalances.Exec()
+
+	addMetricsBalance, _ := database.Prepare(`INSERT INTO statistics (metric) VALUES ('LastUpdateBalance');`)
+
+	addMetricsBalance.Exec()
+
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"cryptotrack/dto"
+	"time"
 )
 
 type BalanceOverallTable struct {
@@ -43,4 +44,8 @@ func GetAllBalancesWithDiff() []BalanceOverallTable {
 
 	return balanceOverallTableMap
 
+}
+
+func CleanUpBalances() {
+	dto.DeleteBalanceByDate(time.Now().AddDate(0, 0, -30))
 }

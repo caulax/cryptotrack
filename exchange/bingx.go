@@ -62,8 +62,7 @@ func GetCoinPriceBingx(coinName string) float64 {
 
 	// Check if the response contains data
 	if len(bingxResponse.Data) == 0 {
-		fmt.Println("No data found in the response.")
-		os.Exit(1)
+		fmt.Println(coinName, "No ticker data available.")
 	}
 
 	var returnValue float64

@@ -48,8 +48,7 @@ func GetCoinPriceBinance(coinName string) float64 {
 
 	// Check if the response contains data
 	if binanceResponse == (BinanceResponse{}) {
-		fmt.Println("No data found in the response.")
-		os.Exit(1)
+		fmt.Println(coinName, "No ticker data available.")
 	}
 
 	// Get the latest price of BTC

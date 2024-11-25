@@ -20,10 +20,11 @@ import (
 const (
 	gateioApiUrl = "https://api.gateio.ws/api/v4/spot/tickers?currency_pair=%s_USDT" // BTC_USDT
 
-	baseURLGateio = "https://api.gateio.ws"
-	prefixGateio  = "/api/v4"
-	methodGateio  = "GET"
-	urlPathGateio = "/spot/accounts"
+	baseURLGateio            = "https://api.gateio.ws"
+	prefixGateio             = "/api/v4"
+	methodGateio             = "GET"
+	urlPathSpotGateio        = "/spot/accounts"
+	urlPathFuturesUSDTGateio = "/futures/usdt/accounts"
 )
 
 type GateioCredentials struct {
@@ -85,6 +86,8 @@ func GetCoinPriceGateio(coinName string) float64 {
 	var coinPrice float64
 	if len(ticker) > 0 {
 		coinPrice, _ = strconv.ParseFloat(ticker[0].Last, 64)
+	} else {
+		fmt.Println(coinName, "No ticker data available.")
 	}
 
 	return coinPrice
@@ -103,7 +106,30 @@ type AccountBalanceResultGateio struct {
 	BalanceUSDT float64
 }
 
-func GetWalletBalanceGateio() []AccountBalanceResultGateio {
+type ResponseFutures struct {
+	Total string `json:"total"`
+}
+
+func updateBalanceGateio(balanceRes *[]AccountBalanceResultGateio, currency string, newBalance float64, newBalanceUSDT float64) {
+	// Loop through the slice to find the currency
+	for i, bal := range *balanceRes {
+		if bal.Currency == currency {
+			// Update the Balance and BalanceUSDT
+			(*balanceRes)[i].Balance = (*balanceRes)[i].Balance + newBalance
+			(*balanceRes)[i].BalanceUSDT = (*balanceRes)[i].BalanceUSDT + newBalanceUSDT
+			return
+		}
+	}
+
+	// If currency not found, append a new entry
+	*balanceRes = append(*balanceRes, AccountBalanceResultGateio{
+		Currency:    currency,
+		Balance:     newBalance,
+		BalanceUSDT: newBalanceUSDT,
+	})
+}
+
+func makeQueryGateio(urlPath string) *http.Response {
 	config, _ := LoadGateioCredentials("config.toml")
 	queryParam := ""
 	bodyParam := ""
@@ -115,13 +141,13 @@ func GetWalletBalanceGateio() []AccountBalanceResultGateio {
 	bodyHash := sha512Hash(bodyParam)
 
 	// Generate sign string
-	signString := fmt.Sprintf("%s\n%s%s\n%s\n%s\n%s", methodGateio, prefixGateio, urlPathGateio, queryParam, bodyHash, timestamp)
+	signString := fmt.Sprintf("%s\n%s%s\n%s\n%s\n%s", methodGateio, prefixGateio, urlPath, queryParam, bodyHash, timestamp)
 
 	// Generate HMAC-SHA512 signature
 	signature := hmacSha512(signString, config.ApiSecret)
 
 	// Construct full URL
-	fullURL := baseURLGateio + prefixGateio + urlPathGateio
+	fullURL := baseURLGateio + prefixGateio + urlPath
 
 	// Make HTTP request
 	client := &http.Client{}
@@ -141,13 +167,22 @@ func GetWalletBalanceGateio() []AccountBalanceResultGateio {
 	if err != nil {
 		fmt.Println("Error sending request:", err)
 	}
-	defer resp.Body.Close()
+
+	return resp
+}
+
+func GetWalletBalanceGateio() []AccountBalanceResultGateio {
+
+	// make spot query
+	respSpot := makeQueryGateio(urlPathSpotGateio)
 
 	// Read response
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(respSpot.Body)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 	}
+
+	respSpot.Body.Close()
 
 	// Map response to struct
 	var accounts []AccountBalanceGateio
@@ -157,24 +192,54 @@ func GetWalletBalanceGateio() []AccountBalanceResultGateio {
 	}
 
 	var accountBalanceResult []AccountBalanceResultGateio
+
 	for _, account := range accounts {
-
-		var accountBalance AccountBalanceResultGateio
-
 		if account.Currency == "USDT" {
-			accountBalance.Currency = account.Currency
-			accountBalance.Balance, _ = strconv.ParseFloat(strings.TrimSpace(account.Available), 64)
-			accountBalance.BalanceUSDT, _ = strconv.ParseFloat(strings.TrimSpace(account.Available), 64)
-			accountBalanceResult = append(accountBalanceResult, accountBalance)
+			usdtBalance, _ := strconv.ParseFloat(strings.TrimSpace(account.Available), 64)
+
+			updateBalanceGateio(
+				&accountBalanceResult,
+				account.Currency,
+				usdtBalance,
+				usdtBalance,
+			)
 		} else {
-			accountBalance.Currency = account.Currency
-			accountBalance.Balance, _ = strconv.ParseFloat(strings.TrimSpace(account.Available), 64)
-			accountBalance.BalanceUSDT = accountBalance.Balance * GetCoinPriceGateio(account.Currency)
-			if accountBalance.BalanceUSDT > 0.1 {
-				accountBalanceResult = append(accountBalanceResult, accountBalance)
+			currencyBalance, _ := strconv.ParseFloat(strings.TrimSpace(account.Available), 64)
+			currencyBalanceUSDT := currencyBalance * GetCoinPriceGateio(account.Currency)
+
+			if currencyBalanceUSDT > 0.1 {
+				updateBalanceGateio(
+					&accountBalanceResult,
+					account.Currency,
+					currencyBalance,
+					currencyBalanceUSDT,
+				)
 			}
 		}
 	}
+
+	// make futures query
+	respFutures := makeQueryGateio(urlPathFuturesUSDTGateio)
+	bodyFutures, err := io.ReadAll(respFutures.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+	}
+
+	var resultFutures ResponseFutures
+	if err := json.Unmarshal(bodyFutures, &resultFutures); err != nil {
+		fmt.Println("Error parsing JSON:", err)
+	}
+
+	respFutures.Body.Close()
+
+	currencyBalanceUSDT, _ := strconv.ParseFloat(strings.TrimSpace(resultFutures.Total), 64)
+
+	updateBalanceGateio(
+		&accountBalanceResult,
+		"USDT",
+		currencyBalanceUSDT,
+		currencyBalanceUSDT,
+	)
 
 	return accountBalanceResult
 }

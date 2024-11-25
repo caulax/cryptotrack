@@ -97,7 +97,7 @@ func GetCoinPriceBybit(coinName string) float64 {
 		// Access the bid1Price field from the first element of the list
 		bid1Price = bybitResponse.Result.List[0].Bid1Price
 	} else {
-		fmt.Println("No ticker data available.")
+		fmt.Println(coinName, "No ticker data available.")
 	}
 
 	var returnValue float64

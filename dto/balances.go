@@ -2,6 +2,7 @@ package dto
 
 import (
 	"cryptotrack/db"
+	"fmt"
 	"time"
 )
 
@@ -62,34 +63,30 @@ func GetLatestOverallBalanceByTiming(timing string) []BalanceOverall {
 	return balances
 }
 
-// func GetAllBalances() []Coin {
-// 	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
-// 	defer database.Close()
+func DeleteBalanceByDate(date time.Time) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
 
-// 	result, _ := database.Query("SELECT id, name, price, exchangeId, active, updateDate FROM coins")
+	// Prepare the DELETE query
+	query := "DELETE FROM balances WHERE timing = 'minute' AND date < ?"
+	statement, err := database.Prepare(query)
+	if err != nil {
+		fmt.Printf("Failed to prepare statement: %v", err)
+	}
+	defer statement.Close()
 
-// 	coins := []Coin{}
-// 	for result.Next() {
-// 		var c Coin
-// 		result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId, &c.Active, &c.UpdateDate)
-// 		coins = append(coins, c)
-// 	}
+	// Execute the DELETE query
+	result, err := statement.Exec(date.Format("2006-01-02"))
+	if err != nil {
+		fmt.Printf("Failed to execute query: %v", err)
+	}
 
-// 	return coins
-// }
+	// Get the number of rows affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		fmt.Printf("Failed to get rows affected: %v", err)
+	}
 
-// func GetAllActiveBalances() []Coin {
-// 	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
-// 	defer database.Close()
+	fmt.Printf("Deleted %d rows older than 30 days.\n", rowsAffected)
 
-// 	result, _ := database.Query("SELECT id, name, price, exchangeId, active, updateDate FROM coins WHERE active = 1")
-
-// 	coins := []Coin{}
-// 	for result.Next() {
-// 		var c Coin
-// 		result.Scan(&c.Id, &c.Name, &c.Price, &c.ExchangeId, &c.Active, &c.UpdateDate)
-// 		coins = append(coins, c)
-// 	}
-
-// 	return coins
-// }
+}

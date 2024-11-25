@@ -317,6 +317,8 @@ func main() {
 		update.UpdateBalance("hourly")
 	case "updateBalanceDaily":
 		update.UpdateBalance("daily")
+	case "cleanUpBalances":
+		service.CleanUpBalances()
 	case "migrations":
 		db.InitMigrations()
 	// case "test":

@@ -79,7 +79,29 @@ func InitMigrations() {
 	statementBalances.Exec()
 
 	addMetricsBalance, _ := database.Prepare(`INSERT INTO statistics (metric) VALUES ('LastUpdateBalance');`)
-
 	addMetricsBalance.Exec()
+
+	statementFuturesHistoryPosition, _ := database.Prepare(`
+	CREATE TABLE futuresHistoryPosition (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		exchangeId INTEGER,
+		openPositionTime TEXT,
+		closePositionTime TEXT,
+		closePrice REAL,
+		openPrice REAL,
+		leverage INTEGER,
+		positionMode TEXT,
+		positionSide TEXT,
+		profit REAL,
+		currencyIn TEXT,
+		currencyFrom TEXT,
+		fee REAL,
+		volume REAL,
+		timeInPosition TEXT
+	)`)
+	statementFuturesHistoryPosition.Exec()
+
+	addMetricsFuturesHistoryPosition, _ := database.Prepare(`INSERT INTO statistics (metric) VALUES ('LastUpdateFuturesHistoryPosition');`)
+	addMetricsFuturesHistoryPosition.Exec()
 
 }

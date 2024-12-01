@@ -1,0 +1,117 @@
+<html>
+    <head>
+        <title>Crypto Track</title>
+        <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="/static/bootstrap.min.css" rel="stylesheet">
+        <style>
+            #red {
+                color: red;
+            }
+            .table>:not(:last-child)>:last-child>* {
+                border-bottom-color: #e1e1e1 !important;
+            }
+
+            .tooltip-container {
+                position: relative;
+                display: inline-block;
+                border-bottom: 1px dotted black;
+                /* color of the span text */
+                color: rgb(119, 162, 241);
+            }
+
+            .tooltip-container .tooltiptext {
+                visibility: hidden;
+                width: 200px;
+                background-color: black;
+                /* color of the tooltip text */
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px 0;
+                position: absolute;
+                z-index: 1;
+            }
+
+            .tooltip-container:hover .tooltiptext {
+                visibility: visible;
+            }
+            .up-color {
+                color: #4ab886;
+            }
+            .down-color {
+                color: #e31c1c;;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="container">
+                <div class="row row-cols-auto">
+                    <div class="col" style="padding-left: 0px;">
+                        <a href="/" style="color: black; text-decoration: none; font-size: 45px;">Crypto Track</a>
+                        
+                    </div>
+                    <div class="col" {{if .TimeAlert }}id="red"{{ end }} style="margin-top: auto;margin-bottom: auto;">{{ .LastUpdate }}</div>
+                </div>
+                <a href="/futures/2" class="btn btn-primary" role="button">OKX</a>
+                <a href="/futures/4" class="btn btn-primary" role="button">Bybit</a>
+            </div>
+
+            <div class="container"><b {{ if gt .OverallProfit 0.0 }}class="up-color"{{ else }}class="down-color"{{ end }}>Overall Profit: {{ printf "%.2f" .OverallProfit}}$</b></div>
+
+            <div hx-ext="ws" ws-connect="ws://:8080/ws">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">ExchangeName</th>
+                            <th scope="col">CurrencyIn</th>
+                            <th scope="col">CurrencyFrom</th>
+                            <th scope="col">Profit</th>
+                            <th scope="col">OpenPrice</th>
+                            <th scope="col">ClosePrice</th>
+                            <th scope="col">Leverage</th>
+                            <th scope="col">PositionMode</th>
+                            <th scope="col">PositionSide</th>
+                            <th scope="col">Fee</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    {{ range .TableData }}
+                        <tbody>
+                            <tr {{ if gt .Profit 0.0 }}class="table-success"{{ else }}class="table-primary"{{ end }}>
+                                <th scope="row">{{ .ExchangeName }}</th>
+                                <td>{{ .CurrencyIn }}</td>
+                                <td>{{ .CurrencyFrom }}</td>
+                                <td>{{ printf "%.2f" .Profit }}</td>
+                                <td>{{ printf "%.2f" .OpenPrice }}</td>
+                                <td>{{ printf "%.2f" .ClosePrice }}</td>
+                                <td>{{ .Leverage }}</td>
+                                <td>{{ .PositionMode }}</td>
+                                <td>{{ .PositionSide }}</td>
+                                <td>{{ printf "%.2f" .Fee }}</td>
+                                <td>
+                                    <p class="tooltip-container">
+                                        <span class="tooltiptext">
+                                            Volume:<br>{{ printf "%.2f" .Volume }}$<br><br>
+                                            OpenPositionTime:<br>{{ .OpenPositionTime }}<br><br>
+                                            ClosePositionTime:<br>{{ .ClosePositionTime }}<br><br>
+                                            TimeInPosition:<br>{{ .TimeInPosition }}
+                                        </span>
+                                        Info
+                                    </p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    {{ end }}
+
+                </table>
+            </div>
+        </div>
+    </body>
+
+    <script src="/static/htmx.min.js"></script>
+    <script src="/static/ws.js"></script>
+    <script src="/static/bootstrap.bundle.min.js"></script>
+</html>

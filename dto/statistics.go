@@ -33,6 +33,18 @@ func GetMetricLastUpdateBalance() *Statistics {
 	return &s
 }
 
+func GetMetricLastUpdateFuturesHistoryPosition() *Statistics {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	var s Statistics
+
+	result := database.QueryRow("SELECT metric, value FROM statistics WHERE metric = 'LastUpdateFuturesHistoryPosition'")
+	result.Scan(&s.Metric, &s.Value)
+
+	return &s
+}
+
 func UpdateMetricLastUpdate(date string) {
 	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
 	defer database.Close()
@@ -46,5 +58,13 @@ func UpdateMetricLastUpdateBalance(date string) {
 	defer database.Close()
 
 	statement, _ := database.Prepare("UPDATE statistics SET value = ? WHERE metric = 'LastUpdateBalance'")
+	statement.Exec(date)
+}
+
+func UpdateMetricLastUpdateFuturesHistoryPosition(date string) {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	statement, _ := database.Prepare("UPDATE statistics SET value = ? WHERE metric = 'LastUpdateFuturesHistoryPosition'")
 	statement.Exec(date)
 }

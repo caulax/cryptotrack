@@ -231,6 +231,94 @@ func GetWalletBalanceOkx() []AccountBalanceResult {
 	return balanceRes
 }
 
+type PositionsHistoryOkx struct {
+	OpenPositionTime  int64   `json:"openPositionTime"`
+	ClosePositionTime int64   `json:"closePositionTime"`
+	ClosePrice        float64 `json:"closePrice"`
+	OpenPrice         float64 `json:"openPrice"`
+	Leverage          float64 `json:"leverage"`
+	PositionMode      string  `json:"positionMode"`
+	PositionSide      string  `json:"positionSide"`
+	Profit            float64 `json:"profit"`
+	CurrencyIn        string  `json:"currencyIn"`
+	CurrencyFrom      string  `json:"currencyFrom"`
+	Fee               float64 `json:"fee"`
+	Volume            float64 `json:"volume"`
+	TimeInPosition    int64   `json:"timeInPosition"`
+}
+
+func mapToPosition(data map[string]interface{}) PositionsHistoryOkx {
+	// Parse raw data fields
+	cTime, _ := strconv.ParseInt(data["cTime"].(string), 10, 64)
+	uTime, _ := strconv.ParseInt(data["uTime"].(string), 10, 64)
+	closeAvgPx, _ := strconv.ParseFloat(data["closeAvgPx"].(string), 64)
+	openAvgPx, _ := strconv.ParseFloat(data["openAvgPx"].(string), 64)
+	lever, _ := strconv.ParseFloat(data["lever"].(string), 64)
+	openMaxPos, _ := strconv.ParseFloat(data["openMaxPos"].(string), 64)
+	fee, _ := strconv.ParseFloat(data["fee"].(string), 64)
+	fundingFee, _ := strconv.ParseFloat(data["fundingFee"].(string), 64)
+	liqPenalty, _ := strconv.ParseFloat(data["liqPenalty"].(string), 64)
+	realizedPnl, _ := strconv.ParseFloat(data["realizedPnl"].(string), 64)
+	uly := data["uly"].(string)
+
+	// Split `uly` into currencies
+	currencies := strings.Split(uly, "-")
+	currencyIn := currencies[0]
+	currencyFrom := currencies[1]
+
+	// Calculate fee, volume, and time in position
+	totalFee := fee + fundingFee + liqPenalty
+	volume := (openMaxPos * openAvgPx) / lever
+	timeInPosition := uTime - cTime
+
+	// openTimeFormatted := formatTimestamp(cTime)
+	// closeTimeFormatted := formatTimestamp(uTime)
+
+	// Map fields to the new struct
+	return PositionsHistoryOkx{
+		OpenPositionTime:  cTime,
+		ClosePositionTime: uTime,
+		ClosePrice:        closeAvgPx,
+		OpenPrice:         openAvgPx,
+		Leverage:          lever,
+		PositionMode:      data["mgnMode"].(string),
+		PositionSide:      data["posSide"].(string),
+		Profit:            realizedPnl,
+		CurrencyIn:        currencyIn,
+		CurrencyFrom:      currencyFrom,
+		Fee:               totalFee,
+		Volume:            volume,
+		TimeInPosition:    timeInPosition,
+	}
+}
+
+func GetWalletPositionsHistoryOkx() []PositionsHistoryOkx {
+
+	resp, err := getRequest("/api/v5/account/positions-history")
+	if err != nil {
+		fmt.Println("Error fetching trading balance:", err)
+	}
+	defer resp.Body.Close()
+
+	bodyResp, _ := io.ReadAll(resp.Body)
+
+	var data map[string]interface{}
+	err = json.Unmarshal(bodyResp, &data)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	var positionsHistoryOkx []PositionsHistoryOkx
+	dataList := data["data"].([]interface{})
+	for _, item := range dataList {
+		data := item.(map[string]interface{})
+		position := mapToPosition(data)
+		positionsHistoryOkx = append(positionsHistoryOkx, position)
+	}
+
+	return positionsHistoryOkx
+}
+
 // type FundingBalance struct {
 // 	Code string `json:"code"`
 // 	Data []struct {

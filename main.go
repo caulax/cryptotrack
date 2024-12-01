@@ -4,6 +4,7 @@ import (
 	"context"
 	"cryptotrack/db"
 	"cryptotrack/dto"
+	"cryptotrack/exchange"
 	"cryptotrack/service"
 	"cryptotrack/update"
 	"flag"
@@ -42,6 +43,13 @@ type VariablesCoin struct {
 	TableData  []service.CoinsExchanges
 	LastUpdate time.Duration
 	TimeAlert  bool
+}
+
+type VariablesFutures struct {
+	TableData     []dto.FuturesPositionsHistory
+	LastUpdate    time.Duration
+	TimeAlert     bool
+	OverallProfit float64
 }
 
 func (s *server) subscriberHandler(w http.ResponseWriter, r *http.Request) {
@@ -267,6 +275,37 @@ func handlerDectivateInvestment(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func handlerFuturesHistoryPositionByExchange(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Path[len("/futures/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		id = 2
+	}
+
+	t, err := template.ParseFiles("htmx/futures.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	diff, timeAlert := service.GetDiffDateFuturesHistoryPosition()
+
+	tableData, overallProfit := dto.GetFuturesHistoryPositionByExchangeId(id)
+	fmt.Println("[INFO] Futures Info:", tableData)
+
+	v := VariablesFutures{
+		TableData:     tableData,
+		LastUpdate:    diff,
+		TimeAlert:     timeAlert,
+		OverallProfit: overallProfit,
+	}
+
+	err = t.Execute(w, &v)
+	if err != nil {
+		fmt.Println(err)
+		w.Write([]byte(err.Error()))
+	}
+}
+
 func NewServer() *server {
 	s := &server{
 		subscriberMessageBuffer: 10,
@@ -279,6 +318,7 @@ func NewServer() *server {
 	s.mux.HandleFunc("/deactivate/{id}", handlerDectivateInvestment)
 	s.mux.HandleFunc("/coin/activate/{id}", handlerActivateCoin)
 	s.mux.HandleFunc("/coin/deactivate/{id}", handlerDectivateCoin)
+	s.mux.HandleFunc("/futures/{exchange}", handlerFuturesHistoryPositionByExchange)
 	s.mux.HandleFunc("/archive", handlerArchive)
 	s.mux.HandleFunc("/coins", handlerCoin)
 	s.mux.HandleFunc("/update", handlerUpdate)
@@ -317,11 +357,14 @@ func main() {
 		update.UpdateBalance("hourly")
 	case "updateBalanceDaily":
 		update.UpdateBalance("daily")
+	case "updateFuturesHistoryPostion":
+		update.UpdateFuturesHistoryPostion()
 	case "cleanUpBalances":
 		service.CleanUpBalances()
 	case "migrations":
 		db.InitMigrations()
-	// case "test":
+	case "test":
+		exchange.GetWalletPositionsHistoryBybit()
 	// // fmt.Println("OKX: ", exchange.GetWalletBalanceOkx())
 	// // fmt.Println("GATEIO: ", exchange.GetWalletBalanceGateio())
 	// // fmt.Println("BYBIT: ", exchange.GetWalletBalanceBybit())

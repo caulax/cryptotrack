@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	bybit "github.com/wuhewuhe/bybit.go.api"
@@ -194,4 +195,172 @@ func GetWalletBalanceBybit() []AccountBalanceResultBybit {
 	}
 
 	return balanceRes
+}
+
+// Trade execution response struct
+type TradeExecution struct {
+	OrderID  string  `json:"orderId"`
+	Fee      float64 `json:"execFee,string"`
+	Symbol   string  `json:"symbol"`
+	Side     string  `json:"side"`
+	ExecType string  `json:"execType"`
+}
+
+// API Response structure for the `/v5/execution/list` endpoint
+type ExecutionResponse struct {
+	RetCode int    `json:"retCode"`
+	RetMsg  string `json:"retMsg"`
+	Result  struct {
+		Executions []TradeExecution `json:"list"`
+	} `json:"result"`
+}
+
+func GetTradeFeeByOrderID(orderID string) float64 {
+
+	config, _ := LoadBybitCredentials("config.toml")
+
+	client := bybit.NewBybitHttpClient(
+		config.ApiKey,
+		config.SecretKey,
+		bybit.WithBaseURL(bybit.MAINNET),
+	)
+
+	// Define the parameters for the API request
+	params := map[string]interface{}{
+		"orderId":  orderID, // Specify the order ID
+		"category": "linear",
+	}
+
+	response, _ := client.NewUtaBybitServiceWithParams(params).GetTradeHistory(context.Background())
+
+	jsonString, _ := json.Marshal(response)
+
+	var executionResponse ExecutionResponse
+	json.Unmarshal(jsonString, &executionResponse)
+
+	// Return the list of executions
+	return executionResponse.Result.Executions[0].Fee
+}
+
+// Input struct to match the "list" items in JSON
+type ClosePnlEntry struct {
+	CreatedTime   string `json:"createdTime"`
+	UpdatedTime   string `json:"updatedTime"`
+	AvgExitPrice  string `json:"avgExitPrice"`
+	AvgEntryPrice string `json:"avgEntryPrice"`
+	Leverage      string `json:"leverage"`
+	OrderType     string `json:"orderType"`
+	OrderId       string `json:"orderId"`
+	Side          string `json:"side"`
+	ClosedPnl     string `json:"closedPnl"`
+	ClosedSize    string `json:"closedSize"`
+	OrderPrice    string `json:"orderPrice"`
+	Symbol        string `json:"symbol"`
+}
+
+// Output struct with transformed fields
+type PositionsHistoryBybit struct {
+	OpenPositionTime  int64   `json:"openPositionTime"`
+	ClosePositionTime int64   `json:"closePositionTime"`
+	ClosePrice        float64 `json:"closePrice"`
+	OpenPrice         float64 `json:"openPrice"`
+	Leverage          float64 `json:"leverage"`
+	PositionMode      string  `json:"positionMode"`
+	PositionSide      string  `json:"positionSide"`
+	Profit            float64 `json:"profit"`
+	CurrencyIn        string  `json:"currencyIn"`
+	CurrencyFrom      string  `json:"currencyFrom"`
+	Fee               float64 `json:"fee"`
+	Volume            float64 `json:"volume"`
+	TimeInPosition    int64   `json:"timeInPosition"`
+}
+
+func TransformClosePnlEntries(entries []ClosePnlEntry) []PositionsHistoryBybit {
+	var transformedEntries []PositionsHistoryBybit
+
+	for _, entry := range entries {
+		// Parse required fields
+		createdTime, _ := strconv.ParseInt(entry.CreatedTime, 10, 64)
+		updatedTime, _ := strconv.ParseInt(entry.UpdatedTime, 10, 64)
+		closePrice, _ := strconv.ParseFloat(entry.AvgExitPrice, 64)
+		openPrice, _ := strconv.ParseFloat(entry.AvgEntryPrice, 64)
+		leverage, _ := strconv.ParseFloat(entry.Leverage, 64)
+		closedPnl, _ := strconv.ParseFloat(entry.ClosedPnl, 64)
+		closedSize, _ := strconv.ParseFloat(entry.ClosedSize, 64)
+		orderPrice, _ := strconv.ParseFloat(entry.OrderPrice, 64)
+
+		// Split symbol into currencyFrom and currencyIn
+		parts := strings.Split(entry.Symbol, "USDT")
+		currencyIn := parts[0]
+		currencyFrom := "USDT"
+
+		// Map "side" to "positionSide"
+		positionSide := "short"
+		if entry.Side == "Buy" {
+			positionSide = "long"
+		}
+
+		// Calculate volume and time in position
+		volume := (closedSize * orderPrice) / leverage
+		timeInPosition := updatedTime - createdTime
+
+		// Append transformed entry
+		transformedEntries = append(transformedEntries, PositionsHistoryBybit{
+			OpenPositionTime:  createdTime,
+			ClosePositionTime: updatedTime,
+			ClosePrice:        closePrice,
+			OpenPrice:         openPrice,
+			Leverage:          leverage,
+			PositionMode:      entry.OrderType,
+			PositionSide:      positionSide,
+			Profit:            closedPnl,
+			CurrencyIn:        currencyIn,
+			CurrencyFrom:      currencyFrom,
+			Fee:               GetTradeFeeByOrderID(entry.OrderId),
+			Volume:            volume,
+			TimeInPosition:    timeInPosition,
+		})
+	}
+
+	return transformedEntries
+}
+
+func GetWalletPositionsHistoryBybit() []PositionsHistoryBybit {
+	config, _ := LoadBybitCredentials("config.toml")
+
+	client := bybit.NewBybitHttpClient(
+		config.ApiKey,
+		config.SecretKey,
+		bybit.WithBaseURL(bybit.MAINNET),
+	)
+
+	paramsUnifiedAccount := map[string]interface{}{
+		"accountType": "UNIFIED",
+		"category":    "linear",
+		"limit":       100,
+		// "startTime": 1729415216000,
+	}
+	closePnl, _ := client.NewUtaBybitServiceWithParams(paramsUnifiedAccount).GetClosePnl(context.Background())
+
+	jsonString, _ := json.Marshal(closePnl)
+
+	var input struct {
+		Result struct {
+			List []ClosePnlEntry `json:"list"`
+		} `json:"result"`
+	}
+
+	err := json.Unmarshal([]byte(jsonString), &input)
+	if err != nil {
+		fmt.Printf("Error parsing JSON: %v\n", err)
+	}
+
+	positionsHistoryBybit := TransformClosePnlEntries(input.Result.List)
+
+	// for _, entry := range positionsHistoryBybit {
+	// 	fmt.Println(entry.OpenPositionTime, entry.ClosePositionTime, entry.ClosePrice, entry.OpenPrice, entry.Leverage, entry.PositionMode, entry.PositionSide, entry.Profit, entry.CurrencyIn, entry.CurrencyFrom, entry.Fee, entry.Volume, entry.TimeInPosition)
+	// }
+
+	return positionsHistoryBybit
+
 }

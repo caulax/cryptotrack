@@ -11,7 +11,7 @@ func UpdateFuturesHistoryPostion() {
 
 	fmt.Println("[INFO] Starting update futures history position for OKX")
 	okxID := dto.GetExchangeIdByName("OKX")
-	futuresHistoryPositionsOkx := exchange.GetWalletPositionsHistoryOkx()
+	futuresHistoryPositionsOkx := exchange.GetWalletPositionsHistoryOkx("okx")
 	for _, futuresHistoryPositionOkx := range futuresHistoryPositionsOkx {
 		if dto.CheckIfTimeExsistInFuturesHistoryPosition(okxID, futuresHistoryPositionOkx.OpenPositionTime, futuresHistoryPositionOkx.ClosePositionTime) {
 			dto.CreateNewFuturesHistoryPosition(
@@ -33,6 +33,31 @@ func UpdateFuturesHistoryPostion() {
 		}
 	}
 	fmt.Println("[INFO] Updated futures history position for OKX")
+
+	fmt.Println("[INFO] Starting update futures history position for OKX")
+	okxIDV := dto.GetExchangeIdByName("V-OKX")
+	futuresHistoryPositionsOkxV := exchange.GetWalletPositionsHistoryOkx("v-okx")
+	for _, futuresHistoryPositionOkx := range futuresHistoryPositionsOkxV {
+		if dto.CheckIfTimeExsistInFuturesHistoryPosition(okxIDV, futuresHistoryPositionOkx.OpenPositionTime, futuresHistoryPositionOkx.ClosePositionTime) {
+			dto.CreateNewFuturesHistoryPosition(
+				okxIDV,
+				futuresHistoryPositionOkx.OpenPositionTime,
+				futuresHistoryPositionOkx.ClosePositionTime,
+				futuresHistoryPositionOkx.ClosePrice,
+				futuresHistoryPositionOkx.OpenPrice,
+				futuresHistoryPositionOkx.Leverage,
+				futuresHistoryPositionOkx.PositionMode,
+				futuresHistoryPositionOkx.PositionSide,
+				futuresHistoryPositionOkx.Profit,
+				futuresHistoryPositionOkx.CurrencyIn,
+				futuresHistoryPositionOkx.CurrencyFrom,
+				futuresHistoryPositionOkx.Fee,
+				futuresHistoryPositionOkx.Volume,
+				futuresHistoryPositionOkx.TimeInPosition,
+			)
+		}
+	}
+	fmt.Println("[INFO] Updated futures history position for V-OKX")
 
 	fmt.Println("[INFO] Starting update futures history position for Bybit")
 	bybitID := dto.GetExchangeIdByName("Bybit")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"cryptotrack/db"
 	"cryptotrack/dto"
-	"cryptotrack/exchange"
 	"cryptotrack/service"
 	"cryptotrack/update"
 	"flag"
@@ -363,8 +362,9 @@ func main() {
 		service.CleanUpBalances()
 	case "migrations":
 		db.InitMigrations()
-	case "test":
-		exchange.GetWalletPositionsHistoryBybit()
+	// case "test":
+	// exchange.GetWalletPositionsHistoryBybit()
+	// exchange.GetWalletPositionsHistoryOkx("v-okx")
 	// // fmt.Println("OKX: ", exchange.GetWalletBalanceOkx())
 	// // fmt.Println("GATEIO: ", exchange.GetWalletBalanceGateio())
 	// // fmt.Println("BYBIT: ", exchange.GetWalletBalanceBybit())

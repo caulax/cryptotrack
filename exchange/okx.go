@@ -29,13 +29,32 @@ type OkxCredentials struct {
 	Passphrase string `toml:"passphrase"`
 }
 
-func LoadOkxCredentials(filePath string) (*OkxCredentials, error) {
-	var okxCredentials OkxCredentials
-	_, err := toml.DecodeFile(filePath, &struct {
-		Okx *OkxCredentials `toml:"okx"`
-	}{Okx: &okxCredentials})
+func LoadOkxCredentials(filePath, credentialsBlock string) (*OkxCredentials, error) {
+	var tomlData map[string]interface{}
+
+	// Decode the TOML file into a generic map
+	_, err := toml.DecodeFile(filePath, &tomlData)
 	if err != nil {
 		return nil, err
+	}
+
+	// Retrieve the desired block
+	blockData, ok := tomlData[credentialsBlock]
+	if !ok {
+		return nil, fmt.Errorf("block %s not found in TOML file", credentialsBlock)
+	}
+
+	// Marshal the block data back into JSON (for compatibility with structs)
+	jsonData, err := json.Marshal(blockData)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling block data: %w", err)
+	}
+
+	// Unmarshal the JSON into the OkxCredentials struct
+	var okxCredentials OkxCredentials
+	err = json.Unmarshal(jsonData, &okxCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling block data into OkxCredentials: %w", err)
 	}
 
 	return &okxCredentials, nil
@@ -146,21 +165,26 @@ func updateBalanceOkx(balanceRes *[]AccountBalanceResult, currency string, newBa
 }
 
 // generateSignature creates a signature for OKX API authentication
-func generateSignature(timestamp, method, endpoint, body string) string {
-	config, _ := LoadOkxCredentials("config.toml")
+// func generateSignature(timestamp, method, endpoint, body string) string {
+// 	config, _ := LoadOkxCredentials("config.toml", "okx")
 
-	signatureString := timestamp + method + endpoint + body
-	h := hmac.New(sha256.New, []byte(config.SecretKey))
-	h.Write([]byte(signatureString))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
-}
+// 	signatureString := timestamp + method + endpoint + body
+// 	h := hmac.New(sha256.New, []byte(config.SecretKey))
+// 	h.Write([]byte(signatureString))
+// 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+// }
 
 // getRequest performs a GET request to the specified OKX endpoint
-func getRequest(endpoint string) (*http.Response, error) {
-	config, _ := LoadOkxCredentials("config.toml")
+func getRequest(endpoint, accountCredentialsBlock string) (*http.Response, error) {
+	config, _ := LoadOkxCredentials("config.toml", accountCredentialsBlock)
 
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-	signature := generateSignature(timestamp, "GET", endpoint, "")
+	// signature := generateSignature(timestamp, "GET", endpoint, "")
+
+	signatureString := timestamp + "GET" + endpoint + ""
+	h := hmac.New(sha256.New, []byte(config.SecretKey))
+	h.Write([]byte(signatureString))
+	signature := base64.StdEncoding.EncodeToString(h.Sum(nil))
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", baseURL+endpoint, nil)
@@ -179,9 +203,9 @@ func getRequest(endpoint string) (*http.Response, error) {
 }
 
 // getTradingBalance fetches and prints trading account balance
-func GetWalletBalanceOkx() []AccountBalanceResult {
+func GetWalletBalanceOkx(accountCredentialsBlock string) []AccountBalanceResult {
 
-	resp, err := getRequest("/api/v5/account/balance")
+	resp, err := getRequest("/api/v5/account/balance", accountCredentialsBlock)
 	if err != nil {
 		fmt.Println("Error fetching trading balance:", err)
 	}
@@ -210,7 +234,7 @@ func GetWalletBalanceOkx() []AccountBalanceResult {
 		}
 	}
 
-	respEarnFlex, err := getRequest("/api/v5/finance/savings/balance")
+	respEarnFlex, err := getRequest("/api/v5/finance/savings/balance", accountCredentialsBlock)
 	if err != nil {
 		fmt.Println("Error fetching earn balance:", err)
 	}
@@ -292,9 +316,9 @@ func mapToPosition(data map[string]interface{}) PositionsHistoryOkx {
 	}
 }
 
-func GetWalletPositionsHistoryOkx() []PositionsHistoryOkx {
+func GetWalletPositionsHistoryOkx(accountCredentialsBlock string) []PositionsHistoryOkx {
 
-	resp, err := getRequest("/api/v5/account/positions-history")
+	resp, err := getRequest("/api/v5/account/positions-history", accountCredentialsBlock)
 	if err != nil {
 		fmt.Println("Error fetching trading balance:", err)
 	}

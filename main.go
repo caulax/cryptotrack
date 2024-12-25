@@ -363,7 +363,7 @@ func main() {
 	case "migrations":
 		db.InitMigrations()
 	// case "test":
-	// exchange.GetWalletPositionsHistoryBybit()
+	// 	fmt.Println(dto.GetLatestOverallBalanceByTiming("minute"))
 	// exchange.GetWalletPositionsHistoryOkx("v-okx")
 	// // fmt.Println("OKX: ", exchange.GetWalletBalanceOkx())
 	// // fmt.Println("GATEIO: ", exchange.GetWalletBalanceGateio())

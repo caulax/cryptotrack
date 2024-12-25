@@ -5,13 +5,13 @@ import (
 )
 
 type OverallInformation struct {
-	AmountInvestmentInUSD            float64
-	AmountIncome                     float64
-	AmountOverallIncome              float64
-	ServiceInvestmentsCoinsExchanges []ServiceInvestmentsCoinsExchanges
+	AmountInvestmentInUSD float64
+	AmountIncome          float64
+	AmountOverallIncome   float64
+	ExchangeData          map[string][]ExchangeDetails
 }
 
-type ServiceInvestmentsCoinsExchanges struct {
+type ExchangeDetails struct {
 	Id              int
 	Date            string
 	InvestmentInUSD float64
@@ -19,78 +19,83 @@ type ServiceInvestmentsCoinsExchanges struct {
 	Active          bool
 	CoinName        string
 	CurrentPrice    float64
-	ExchangeName    string
 	Profit          int
 	Income          float64
 	OverallIncome   float64
 }
 
-func CountProfitIncomeOverallIncome() []ServiceInvestmentsCoinsExchanges {
-
-	serviceInvestments := []ServiceInvestmentsCoinsExchanges{}
+func CountProfitIncomeOverallIncome() map[string][]ExchangeDetails {
+	exchangeDetails := make(map[string][]ExchangeDetails)
 	investments := dto.GetInvestmentsCoinsExchanges()
 
 	for _, v := range investments {
-		var sICE ServiceInvestmentsCoinsExchanges
-
-		sICE.Id = v.Id
-		sICE.Date = v.Date.Format("2006-01-02")
-		sICE.InvestmentInUSD = v.InvestmentInUSD
-		sICE.PurchasePrice = v.PurchasePrice
-		sICE.Active = v.Active
-		sICE.CoinName = v.CoinName
-		sICE.CurrentPrice = v.CurrentPrice
-		sICE.ExchangeName = v.ExchangeName
-		sICE.Profit = int((v.CurrentPrice - v.PurchasePrice) / v.PurchasePrice * 100)
-		sICE.Income = float64(v.InvestmentInUSD * (float64(sICE.Profit) / 100))
-		sICE.OverallIncome = v.InvestmentInUSD + sICE.Income
-
-		serviceInvestments = append(serviceInvestments, sICE)
-
+		if v.Active {
+			detail := ExchangeDetails{
+				Id:              v.Id,
+				Date:            v.Date.Format("2006-01-02"),
+				InvestmentInUSD: v.InvestmentInUSD,
+				PurchasePrice:   v.PurchasePrice,
+				Active:          v.Active,
+				CoinName:        v.CoinName,
+				CurrentPrice:    v.CurrentPrice,
+				Profit:          int((v.CurrentPrice - v.PurchasePrice) / v.PurchasePrice * 100),
+				Income:          float64(v.InvestmentInUSD * (float64(int((v.CurrentPrice-v.PurchasePrice)/v.PurchasePrice*100)) / 100)),
+				OverallIncome:   v.InvestmentInUSD + float64(v.InvestmentInUSD*(float64(int((v.CurrentPrice-v.PurchasePrice)/v.PurchasePrice*100))/100)),
+			}
+			exchangeDetails[v.ExchangeName] = append(exchangeDetails[v.ExchangeName], detail)
+		}
 	}
-	return serviceInvestments
+	return exchangeDetails
+}
+
+func CountProfitIncomeOverallIncomeArchive() map[string][]ExchangeDetails {
+	exchangeDetails := make(map[string][]ExchangeDetails)
+	investments := dto.GetInvestmentsCoinsExchanges()
+
+	for _, v := range investments {
+		if !v.Active {
+			detail := ExchangeDetails{
+				Id:              v.Id,
+				Date:            v.Date.Format("2006-01-02"),
+				InvestmentInUSD: v.InvestmentInUSD,
+				PurchasePrice:   v.PurchasePrice,
+				Active:          v.Active,
+				CoinName:        v.CoinName,
+				CurrentPrice:    v.CurrentPrice,
+				Profit:          int((v.CurrentPrice - v.PurchasePrice) / v.PurchasePrice * 100),
+				Income:          float64(v.InvestmentInUSD * (float64(int((v.CurrentPrice-v.PurchasePrice)/v.PurchasePrice*100)) / 100)),
+				OverallIncome:   v.InvestmentInUSD + float64(v.InvestmentInUSD*(float64(int((v.CurrentPrice-v.PurchasePrice)/v.PurchasePrice*100))/100)),
+			}
+			exchangeDetails[v.ExchangeName] = append(exchangeDetails[v.ExchangeName], detail)
+		}
+	}
+	return exchangeDetails
 }
 
 func GetOverallInformation() OverallInformation {
+	exchangeData := CountProfitIncomeOverallIncome()
+	overallInformation := OverallInformation{ExchangeData: exchangeData}
 
-	var overallInformation OverallInformation
-
-	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
-
-	res := []ServiceInvestmentsCoinsExchanges{}
-
-	for _, v := range profitIncomeOverallIncome {
-		if v.Active {
+	for _, details := range exchangeData {
+		for _, v := range details {
 			overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
 			overallInformation.AmountIncome += v.Income
 			overallInformation.AmountOverallIncome += v.OverallIncome
-			res = append(res, v)
 		}
 	}
-
-	overallInformation.ServiceInvestmentsCoinsExchanges = res
-
 	return overallInformation
 }
 
 func GetArchiveInformation() OverallInformation {
+	exchangeData := CountProfitIncomeOverallIncomeArchive()
+	overallInformation := OverallInformation{ExchangeData: exchangeData}
 
-	var overallInformation OverallInformation
-
-	profitIncomeOverallIncome := CountProfitIncomeOverallIncome()
-
-	res := []ServiceInvestmentsCoinsExchanges{}
-
-	for _, v := range profitIncomeOverallIncome {
-		if !v.Active {
+	for _, details := range exchangeData {
+		for _, v := range details {
 			overallInformation.AmountInvestmentInUSD += v.InvestmentInUSD
 			overallInformation.AmountIncome += v.Income
 			overallInformation.AmountOverallIncome += v.OverallIncome
-			res = append(res, v)
 		}
 	}
-
-	overallInformation.ServiceInvestmentsCoinsExchanges = res
-
 	return overallInformation
 }

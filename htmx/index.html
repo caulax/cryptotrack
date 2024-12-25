@@ -24,6 +24,16 @@
                 </div>
             </div>
 
+            <div class="container">
+                <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
+                <a href="/update" class="btn btn-success" role="button">Update</a>
+                <a href="/coins" class="btn btn-primary" role="button">Coins</a>
+                <a href="/archive" class="btn btn-secondary" role="button">Archive</a>
+                <a href="/futures/2" class="btn btn-secondary" role="button">OKX Futures</a>
+                <a href="/futures/4" class="btn btn-secondary" role="button">Bybit Futures</a>
+                <a href="/futures/6" class="btn btn-secondary" role="button">V-OKX Futures</a>
+            </div>
+
             <div class="container balanceOverall">
                 <div class="container">
                     <div class="row row-cols-auto">
@@ -71,74 +81,74 @@
                     </div>
                 </div>
 
-                <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
-                <a href="/update" class="btn btn-success" role="button">Update</a>
-                <a href="/coins" class="btn btn-primary" role="button">Coins</a>
-                <a href="/archive" class="btn btn-secondary" role="button">Archive</a>
-                <a href="/futures/2" class="btn btn-secondary" role="button">OKX Futures</a>
-                <a href="/futures/4" class="btn btn-secondary" role="button">Bybit Futures</a>
+                <div class="container">
 
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Coin name</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Exchange</th>
-                            <th scope="col">Investment</th>
-                            <th scope="col">Purchased Price</th>
-                            <th scope="col">Current Price</th>
-                            <th scope="col">Profit</th>
-                            <th scope="col">Income</th>
-                            <th scope="col">Overall income</th>
-                            <th scope="col">Deactivate</th>
-                        </tr>
-                    </thead>
-                    {{ range .TableData.ServiceInvestmentsCoinsExchanges }}
-                        <tbody>
-                            <tr {{ if and (gt .Profit 0) (.Active) }}
-                                    class="table-success"
-                                {{ else if and (lt .Profit 0) (.Active) }}
-                                    class="table-primary"
-                                {{ else if not .Active }}
-                                    class="table-active"
-                                {{ end }}>
-                                <th scope="row">{{ .CoinName }}</th>
-                                <td>{{ .Date }}</td>
-                                <td>{{ .ExchangeName }}</td>
-                                <td>{{ .InvestmentInUSD }}</td>
-                                <td>{{ .PurchasePrice }} USD</td>
-                                <td>{{ .CurrentPrice }} USD</td>
-                                <td>{{ .Profit }} %</td>
-                                <td>{{ printf "%.2f" .Income }} USD</td>
-                                <td>{{ printf "%.2f" .OverallIncome }} USD</td>
-                                <td>
-                                    {{ if .Active }}
-                                        <a href="/deactivate/{{ .Id }}" style="font-size: 10px;" class="btn btn-danger" role="button">X</a>
-                                    {{ else }}
-                                        <a href="/activate/{{ .Id }}" style="font-size: 10px;" class="btn btn-success" role="button">O</a>
-                                    {{ end }}
-                                </td>
-                            </tr>
-                        </tbody>
+                    {{range $exchange, $details := .TableData.ExchangeData}}
+                        {{ if $details }}
+                            <h3>{{ $exchange }}</h3>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Coin name</th>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Investment</th>
+                                        <th scope="col">Purchased Price</th>
+                                        <th scope="col">Current Price</th>
+                                        <th scope="col">Profit</th>
+                                        <th scope="col">Income</th>
+                                        <th scope="col">Overall income</th>
+                                        <th scope="col">Deactivate</th>
+                                    </tr>
+                                </thead>
+                                {{ range $details }}
+                                        <tbody>
+                                            <tr 
+                                            {{ if and (gt .Profit 0) (.Active) }}
+                                                class="table-success"
+                                            {{ else if and (lt .Profit 0) (.Active) }}
+                                                class="table-primary"
+                                            {{ else if not .Active }}
+                                                class="table-active"
+                                            {{ end }}>
+                                                <th scope="row">{{ .CoinName }}</th>
+                                                <td>{{ .Date }}</td>
+                                                <td>{{ .InvestmentInUSD }}</td>
+                                                <td>{{ .PurchasePrice }} USD</td>
+                                                <td>{{ .CurrentPrice }} USD</td>
+                                                <td>{{ .Profit }} %</td>
+                                                <td>{{ printf "%.2f" .Income }} USD</td>
+                                                <td>{{ printf "%.2f" .OverallIncome }} USD</td>
+                                                <td>
+                                                    {{ if .Active }}
+                                                        <a href="/deactivate/{{ .Id }}" style="font-size: 10px;" class="btn btn-danger" role="button">X</a>
+                                                    {{ else }}
+                                                        <a href="/activate/{{ .Id }}" style="font-size: 10px;" class="btn btn-success" role="button">O</a>
+                                                    {{ end }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                {{ end }}
+                                <tbody>
+                                    <tr>
+                                        <th></th>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        {{ end }}
                     {{ end }}
-                    <tbody>
-                        <tr>
-                            <th></th>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    </tbody>
+                    <table class="table">
                         <tbody>
                             <tr>
                                 <th>Overall</th>
-                                <td></td>
                                 <td></td>
                                 <td>{{ printf "%.2f" .TableData.AmountInvestmentInUSD }} USD</td>
                                 <td></td>
@@ -147,9 +157,11 @@
                                 <td>{{ printf "%.2f" .TableData.AmountIncome }} USD</td>
                                 <td>{{ printf "%.2f" .TableData.AmountOverallIncome }} USD</td>
                                 <td></td>
+                                <td></td>
                             </tr>
                         </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
         </div>
     </body>

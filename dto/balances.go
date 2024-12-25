@@ -16,6 +16,13 @@ type Balance struct {
 	Timing      string
 }
 
+type BalanceByCoin struct {
+	CoinName     string
+	Balance      float64
+	BalanceUSDT  float64
+	ExchangeName string
+}
+
 type BalanceOverall struct {
 	BalanceUSDT  float64
 	ExchangeName string
@@ -61,6 +68,31 @@ func GetLatestOverallBalanceByTiming(timing string) []BalanceOverall {
 	}
 
 	return balances
+}
+
+func GetLatestBalanceByTiming(timing string) []BalanceByCoin {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	result, _ := database.Query(`
+	SELECT
+		b.currency,
+		b.balance,
+		b.balanceUSDT,
+		e.name
+	FROM balances AS b
+	JOIN exchanges AS e ON e.id = b.exchangeId
+	WHERE timing = ? AND date = (SELECT MAX(date) FROM balances WHERE timing = ?)`, timing, timing)
+
+	balances := []BalanceByCoin{}
+	for result.Next() {
+		var bal BalanceByCoin
+		result.Scan(&bal.CoinName, &bal.Balance, &bal.BalanceUSDT, &bal.ExchangeName)
+		balances = append(balances, bal)
+	}
+
+	return balances
+
 }
 
 func DeleteBalanceByDate(date time.Time) {

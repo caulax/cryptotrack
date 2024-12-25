@@ -30,12 +30,13 @@ type server struct {
 }
 
 type Variables struct {
-	TableData         service.OverallInformation
-	TableDataBalance  []service.BalanceOverallTable
-	LastUpdate        time.Duration
-	TimeAlert         bool
-	LastUpdateBalance time.Duration
-	TimeAlertBalance  bool
+	TableData                  service.OverallInformation
+	TableDataBalance           []service.BalanceOverallTable
+	TableDataBalanceByExchange map[string][]service.BalanceByCoin
+	LastUpdate                 time.Duration
+	TimeAlert                  bool
+	LastUpdateBalance          time.Duration
+	TimeAlertBalance           bool
 }
 
 type VariablesCoin struct {
@@ -105,16 +106,19 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 
 	balanceOverall := service.GetAllBalancesWithDiff()
 
+	balanceOverallByExchange := service.GetAllBalancesWithDiffByExchangeAndCoin()
+
 	tableData := service.GetOverallInformation()
 	fmt.Println("[INFO] Overall Info:", tableData)
 
 	v := Variables{
-		TableData:         tableData,
-		TableDataBalance:  balanceOverall,
-		LastUpdate:        diff,
-		TimeAlert:         timeAlert,
-		LastUpdateBalance: diffBalance,
-		TimeAlertBalance:  timeAlertBalance,
+		TableData:                  tableData,
+		TableDataBalance:           balanceOverall,
+		TableDataBalanceByExchange: balanceOverallByExchange,
+		LastUpdate:                 diff,
+		TimeAlert:                  timeAlert,
+		LastUpdateBalance:          diffBalance,
+		TimeAlertBalance:           timeAlertBalance,
 	}
 
 	err = t.Execute(w, &v)
@@ -363,13 +367,7 @@ func main() {
 	case "migrations":
 		db.InitMigrations()
 	// case "test":
-	// 	fmt.Println(dto.GetLatestOverallBalanceByTiming("minute"))
-	// exchange.GetWalletPositionsHistoryOkx("v-okx")
-	// // fmt.Println("OKX: ", exchange.GetWalletBalanceOkx())
-	// // fmt.Println("GATEIO: ", exchange.GetWalletBalanceGateio())
-	// // fmt.Println("BYBIT: ", exchange.GetWalletBalanceBybit())
-	// // fmt.Println(dto.GetLatestOverallBalanceByTiming("minute"))
-	// // fmt.Println(service.GetAllBalancesWithDiff())
+	// 	fmt.Println(service.GetAllBalances())
 	default:
 		fmt.Println("Invalid mode. Use 'server' or 'update'.")
 		os.Exit(1)

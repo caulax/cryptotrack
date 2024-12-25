@@ -12,19 +12,42 @@
             .table>:not(:last-child)>:last-child>* {
                 border-bottom-color: #e1e1e1 !important;
             }
+            .header-block {
+                background-color: #d1d8e7;
+                border-radius: 10px;
+            }
+            .header-block-name {
+                margin-bottom: 6px;
+                margin-top: 6px;
+            }
+            .header-block-lastupdate {
+                margin-top: auto;
+                margin-bottom: auto;
+            }
+            .controll-panel {
+                margin: 10px;
+            }
+            .main-header {
+                color: black;
+                text-decoration: none;
+                font-size: 45px;
+            }
+            .button-activate-deactivate {
+                font-size: 10px;
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="container">
-                <div class="row row-cols-auto">
-                    <div class="col" style="padding-left: 0px;">
-                        <a href="/" style="color: black; text-decoration: none; font-size: 45px;">Crypto Track</a>
+                <div class="row justify-content-center">
+                    <div class="col text-center">
+                        <a href="/" class="main-header">Crypto Track</a>
                     </div>
                 </div>
             </div>
 
-            <div class="container">
+            <div class="container controll-panel">
                 <a href="/add" class="btn btn-primary" role="button">Add New Crypto</a>
                 <a href="/update" class="btn btn-success" role="button">Update</a>
                 <a href="/coins" class="btn btn-primary" role="button">Coins</a>
@@ -34,17 +57,22 @@
                 <a href="/futures/6" class="btn btn-secondary" role="button">V-OKX Futures</a>
             </div>
 
-            <div class="container balanceOverall">
-                <div class="container">
-                    <div class="row row-cols-auto">
-                        <div class="col" style="padding-left: 0px;">
-                            <p style="color: black; text-decoration: none; font-size: 30px;">Overall Balance</p>
-                        </div>
-                        <div class="col" {{if .TimeAlertBalance }}id="red"{{ end }} style="margin-top: auto;margin-bottom: auto;">{{ .LastUpdateBalance }}</div>
+            <div class="container header-block">
+                <div class="row justify-content-center">
+                    <div class="col text-center">
+                        <h2 class="header-block-name">Balances By Exchange</h2>
+                    </div>
+                    <div class="col text-center header-block-lastupdate" {{if .TimeAlertBalance }}id="red"{{ end }}>{{ .LastUpdateBalance }}</div>
+                    <div class="col text-center header-block-lastupdate">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBalanceExchange" aria-expanded="false" aria-controls="collapseBalanceExchange">
+                            Collapse
+                          </button>
                     </div>
                 </div>
-                
-                <table class="table balanceOverallTable">
+            </div>
+            
+            <div class="container show" id="collapseBalanceExchange">
+                <table class="table">
                     <thead>
                         <tr>
                             <th scope="col">Exchange</th>
@@ -57,12 +85,12 @@
                         <tbody>
                             <tr>
                                 <th scope="row">{{ .ExchangeName }}</th>
-                                <td>{{ printf "%.2f" .BalanceUSDT }}</td>
+                                <td>{{ printf "%.2f" .BalanceUSDT }}$</td>
                                 <td {{ if gt .BalanceUSDTHourlyDiff 0.0 }}class="table-success"{{ else }}class="table-primary"{{ end }}>
-                                    {{ printf "%.2f" .BalanceUSDTHourly }} | {{ printf "%.2f" .BalanceUSDTHourlyDiff }} {{ if gt .BalanceUSDTHourlyDiff 0.0 }}↑{{ else }}↓{{ end }}
+                                    {{ printf "%.2f" .BalanceUSDTHourly }}$ | {{ printf "%.2f" .BalanceUSDTHourlyDiff }} {{ if gt .BalanceUSDTHourlyDiff 0.0 }}↑{{ else }}↓{{ end }}
                                 </td>
                                 <td {{ if gt .BalanceUSDTDailyDiff 0.0 }}class="table-success"{{ else }}class="table-primary"{{ end }}>
-                                    {{ printf "%.2f" .BalanceUSDTDaily }} | {{ printf "%.2f" .BalanceUSDTDailyDiff }} {{ if gt .BalanceUSDTDailyDiff 0.0 }}↑{{ else }}↓{{ end }}
+                                    {{ printf "%.2f" .BalanceUSDTDaily }}$ | {{ printf "%.2f" .BalanceUSDTDailyDiff }} {{ if gt .BalanceUSDTDailyDiff 0.0 }}↑{{ else }}↓{{ end }}
                                 </td>
                             </tr>
                         </tbody>
@@ -72,20 +100,76 @@
 
             <div hx-ext="ws" ws-connect="ws://:8080/ws">
 
-                <div class="container">
-                    <div class="row row-cols-auto">
-                        <div class="col" style="padding-left: 0px;">
-                            <p style="color: black; text-decoration: none; font-size: 30px;">Investment in Coins</p>
+                <div class="container header-block">
+                    <div class="row justify-content-center">
+                        <div class="col text-center">
+                            <h2 class="header-block-name">Balances By Coins</h2>
                         </div>
-                        <div class="col" {{if .TimeAlert }}id="red"{{ end }} style="margin-top: auto;margin-bottom: auto;">{{ .LastUpdate }}</div>
+                        <div class="col text-center header-block-lastupdate" {{if .TimeAlert }}id="red"{{ end }}>{{ .LastUpdateBalance }}</div>
+                        <div class="col text-center header-block-lastupdate">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBalanceCoin" aria-expanded="false" aria-controls="collapseBalanceCoin">
+                                Collapse
+                              </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="container">
+                <div class="container show" id="collapseBalanceCoin">
+
+                    {{range $exchange, $details := .TableDataBalanceByExchange}}
+                            <h4>{{ $exchange }}</h4>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Coin name</th>
+                                        <th scope="col">Balance</th>
+                                        <th scope="col">BalanceUSDT</th>
+                                        <th scope="col">BalanceUSDTHourly</th>
+                                        <th scope="col">BalanceUSDTDaily</th>
+                                    </tr>
+                                </thead>
+                                {{ range $details }}
+                                        <tbody>
+                                                <th scope="row">{{ .CoinName }}</th>
+                                                <td>{{ printf "%.2f" .Balance }}</td>
+                                                <td>{{ printf "%.2f" .BalanceUSDT }}$</td>
+                                                <td {{ if gt .BalanceUSDTHourlyDiff 0.0 }}class="table-success"{{ else }}class="table-primary"{{ end }}>{{ printf "%.2f" .BalanceUSDTHourly }}$ | {{ printf "%.2f" .BalanceUSDTHourlyDiff }} {{ if gt .BalanceUSDTHourlyDiff 0.0 }}↑{{ else }}↓{{ end }}</td>
+                                                <td {{ if gt .BalanceUSDTDailyDiff 0.0 }}class="table-success"{{ else }}class="table-primary"{{ end }}>{{ printf "%.2f" .BalanceUSDTDaily }}$ | {{ printf "%.2f" .BalanceUSDTDailyDiff }} {{ if gt .BalanceUSDTDailyDiff 0.0 }}↑{{ else }}↓{{ end }}</td>
+                                            </tr>
+                                        </tbody>
+                                {{ end }}
+                                <tbody>
+                                    <tr>
+                                        <th></th>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                    {{ end }}
+                </div>
+
+                <div class="container header-block">
+                    <div class="row justify-content-center">
+                        <div class="col text-center">
+                            <h2 class="header-block-name">Investment in Coins</h2>
+                        </div>
+                        <div class="col text-center header-block-lastupdate" {{if .TimeAlert }}id="red"{{ end }}>{{ .LastUpdate }}</div>
+                        <div class="col text-center header-block-lastupdate">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInvestmentInCoin" aria-expanded="false" aria-controls="collapseInvestmentInCoin">
+                                Collapse
+                              </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container show" id="collapseInvestmentInCoin">
 
                     {{range $exchange, $details := .TableData.ExchangeData}}
                         {{ if $details }}
-                            <h3>{{ $exchange }}</h3>
+                            <h4>{{ $exchange }}</h4>
                             <table class="table">
                                 <thead>
                                     <tr>
@@ -112,17 +196,17 @@
                                             {{ end }}>
                                                 <th scope="row">{{ .CoinName }}</th>
                                                 <td>{{ .Date }}</td>
-                                                <td>{{ .InvestmentInUSD }}</td>
-                                                <td>{{ .PurchasePrice }} USD</td>
-                                                <td>{{ .CurrentPrice }} USD</td>
+                                                <td>{{ .InvestmentInUSD }}$</td>
+                                                <td>{{ .PurchasePrice }}$</td>
+                                                <td>{{ .CurrentPrice }}$</td>
                                                 <td>{{ .Profit }} %</td>
-                                                <td>{{ printf "%.2f" .Income }} USD</td>
-                                                <td>{{ printf "%.2f" .OverallIncome }} USD</td>
+                                                <td>{{ printf "%.2f" .Income }}$</td>
+                                                <td>{{ printf "%.2f" .OverallIncome }}$</td>
                                                 <td>
                                                     {{ if .Active }}
-                                                        <a href="/deactivate/{{ .Id }}" style="font-size: 10px;" class="btn btn-danger" role="button">X</a>
+                                                        <a href="/deactivate/{{ .Id }}" class="btn btn-danger button-activate-deactivate" role="button">X</a>
                                                     {{ else }}
-                                                        <a href="/activate/{{ .Id }}" style="font-size: 10px;" class="btn btn-success" role="button">O</a>
+                                                        <a href="/activate/{{ .Id }}" class="btn btn-success button-activate-deactivate" role="button">O</a>
                                                     {{ end }}
                                                 </td>
                                             </tr>
@@ -150,12 +234,12 @@
                             <tr>
                                 <th>Overall</th>
                                 <td></td>
-                                <td>{{ printf "%.2f" .TableData.AmountInvestmentInUSD }} USD</td>
+                                <td>{{ printf "%.2f" .TableData.AmountInvestmentInUSD }}$</td>
                                 <td></td>
                                 <td></td>
                                 <td></td>
-                                <td>{{ printf "%.2f" .TableData.AmountIncome }} USD</td>
-                                <td>{{ printf "%.2f" .TableData.AmountOverallIncome }} USD</td>
+                                <td>{{ printf "%.2f" .TableData.AmountIncome }}$</td>
+                                <td>{{ printf "%.2f" .TableData.AmountOverallIncome }}$</td>
                                 <td></td>
                                 <td></td>
                             </tr>

@@ -43,22 +43,20 @@ func GetLatestOverallBalanceByTiming(timing string) []BalanceOverall {
 
 	result, _ := database.Query(`
 	SELECT 
-		balanceUSDT,
-		exchangeName,
-		date
+		SUM(maxDate.balanceUSDT) as balanceUSDT,
+		e.name as ExchangeName,
+		maxDate.date as Date
 	FROM (
 		SELECT
-			SUM(b.balanceUSDT) as balanceUSDT,
-			e.name as exchangeName,
-			b.date as date,
-			b.timing as timing
+			b.balanceUSDT,
+			b.exchangeId,
+			b.date
 		FROM balances as b
-		JOIN exchanges as e ON e.id = b.exchangeId
-		WHERE timing = ?
-		GROUP BY date, exchangeId
-	) as allBalances
-	WHERE date = (SELECT MAX(date) FROM balances WHERE timing = ?)
-	`, timing, timing)
+		WHERE date = (SELECT MAX(date) FROM balances WHERE timing = ?)
+		) as maxDate
+	JOIN exchanges as e ON e.id = maxDate.exchangeId
+	GROUP BY maxDate.date, maxDate.exchangeId
+	`, timing)
 
 	balances := []BalanceOverall{}
 	for result.Next() {
@@ -75,14 +73,22 @@ func GetLatestBalanceByTiming(timing string) []BalanceByCoin {
 	defer database.Close()
 
 	result, _ := database.Query(`
-	SELECT
-		b.currency,
-		b.balance,
-		b.balanceUSDT,
-		e.name
-	FROM balances AS b
-	JOIN exchanges AS e ON e.id = b.exchangeId
-	WHERE timing = ? AND date = (SELECT MAX(date) FROM balances WHERE timing = ?)`, timing, timing)
+	SELECT 
+		maxDate.currency as CoinName,
+		maxDate.balance as Balance,
+		maxDate.balanceUSDT as BalanceUSDT,
+		e.name as ExchangeName
+	FROM (
+		SELECT
+			b.currency,
+			b.balance,
+			b.balanceUSDT,
+			b.exchangeId
+		FROM balances AS b
+		WHERE date = (SELECT MAX(date) FROM balances WHERE timing = "minute")
+		) as maxDate
+	JOIN exchanges AS e ON e.id = maxDate.exchangeId
+	`, timing)
 
 	balances := []BalanceByCoin{}
 	for result.Next() {

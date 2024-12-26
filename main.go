@@ -104,11 +104,18 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 	diff, timeAlert := service.GetDiffDate()
 	diffBalance, timeAlertBalance := service.GetDiffDateBalance()
 
+	start := time.Now()
 	balanceOverall := service.GetAllBalancesWithDiff()
+	fmt.Printf("[INFO] GetAllBalancesWithDiff TIME: %v\n", time.Since(start))
 
+	start = time.Now()
 	balanceOverallByExchange := service.GetAllBalancesWithDiffByExchangeAndCoin()
+	fmt.Printf("[INFO] GetAllBalancesWithDiffByExchangeAndCoin TIME: %v\n", time.Since(start))
 
+	start = time.Now()
 	tableData := service.GetOverallInformation()
+	fmt.Printf("[INFO] GetOverallInformation TIME: %v\n", time.Since(start))
+
 	fmt.Println("[INFO] Overall Info:", tableData)
 
 	v := Variables{

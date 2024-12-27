@@ -85,7 +85,7 @@ func GetLatestBalanceByTiming(timing string) []BalanceByCoin {
 			b.balanceUSDT,
 			b.exchangeId
 		FROM balances AS b
-		WHERE date = (SELECT MAX(date) FROM balances WHERE timing = "minute")
+		WHERE date = (SELECT MAX(date) FROM balances WHERE timing = ?)
 		) as maxDate
 	JOIN exchanges AS e ON e.id = maxDate.exchangeId
 	`, timing)

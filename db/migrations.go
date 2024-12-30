@@ -104,4 +104,10 @@ func InitMigrations() {
 	addMetricsFuturesHistoryPosition, _ := database.Prepare(`INSERT INTO statistics (metric) VALUES ('LastUpdateFuturesHistoryPosition');`)
 	addMetricsFuturesHistoryPosition.Exec()
 
+	createIndexBalance, _ := database.Prepare(`CREATE INDEX idx_balances_date_timing ON balances(date, timing);`)
+	createIndexBalance.Exec()
+
+	createIndexExchange, _ := database.Prepare(`CREATE INDEX idx_balances_exchangeId ON balances(exchangeId);`)
+	createIndexExchange.Exec()
+
 }

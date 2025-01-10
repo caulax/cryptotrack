@@ -61,7 +61,7 @@ func UpdateFuturesHistoryPostion() {
 
 	fmt.Println("[INFO] Starting update futures history position for Bybit")
 	bybitID := dto.GetExchangeIdByName("Bybit")
-	futuresHistoryPositionsBybit := exchange.GetWalletPositionsHistoryBybit()
+	futuresHistoryPositionsBybit := exchange.GetWalletPositionsHistoryBybit("bybit")
 	for _, futuresHistoryPositionBybit := range futuresHistoryPositionsBybit {
 		if dto.CheckIfTimeExsistInFuturesHistoryPosition(bybitID, futuresHistoryPositionBybit.OpenPositionTime, futuresHistoryPositionBybit.ClosePositionTime) {
 			dto.CreateNewFuturesHistoryPosition(

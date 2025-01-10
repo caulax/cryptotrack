@@ -23,16 +23,47 @@ type BybitCredentials struct {
 	SecretKey string `toml:"secretKey"`
 }
 
-func LoadBybitCredentials(filePath string) (*BybitCredentials, error) {
-	var bybitCredentials BybitCredentials
-	_, err := toml.DecodeFile(filePath, &struct {
-		ByBit *BybitCredentials `toml:"bybit"`
-	}{ByBit: &bybitCredentials})
+func LoadBybitCredentials(filePath, credentialsBlock string) (*BybitCredentials, error) {
+	var tomlData map[string]interface{}
+
+	// Decode the TOML file into a generic map
+	_, err := toml.DecodeFile(filePath, &tomlData)
 	if err != nil {
 		return nil, err
 	}
+
+	// Retrieve the desired block
+	blockData, ok := tomlData[credentialsBlock]
+	if !ok {
+		return nil, fmt.Errorf("block %s not found in TOML file", credentialsBlock)
+	}
+
+	// Marshal the block data back into JSON (for compatibility with structs)
+	jsonData, err := json.Marshal(blockData)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling block data: %w", err)
+	}
+
+	// Unmarshal the JSON into the BybitCredentials struct
+	var bybitCredentials BybitCredentials
+	err = json.Unmarshal(jsonData, &bybitCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling block data into bybitCredentials: %w", err)
+	}
+
 	return &bybitCredentials, nil
 }
+
+// func LoadBybitCredentials(filePath string) (*BybitCredentials, error) {
+// 	var bybitCredentials BybitCredentials
+// 	_, err := toml.DecodeFile(filePath, &struct {
+// 		ByBit *BybitCredentials `toml:"bybit"`
+// 	}{ByBit: &bybitCredentials})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &bybitCredentials, nil
+// }
 
 type BybitTickerResponse struct {
 	RetCode    int        `json:"retCode"`
@@ -133,8 +164,8 @@ func updateBalanceBybit(balanceRes *[]AccountBalanceResultBybit, currency string
 	})
 }
 
-func GetWalletBalanceBybit() []AccountBalanceResultBybit {
-	config, _ := LoadBybitCredentials("config.toml")
+func GetWalletBalanceBybit(accountCredentialsBlock string) []AccountBalanceResultBybit {
+	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
 
 	client := bybit.NewBybitHttpClient(config.ApiKey, config.SecretKey, bybit.WithBaseURL(bybit.MAINNET))
 
@@ -215,9 +246,9 @@ type ExecutionResponse struct {
 	} `json:"result"`
 }
 
-func GetTradeFeeByOrderID(orderID string) float64 {
+func GetTradeFeeByOrderID(orderID, accountCredentialsBlock string) float64 {
 
-	config, _ := LoadBybitCredentials("config.toml")
+	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
 
 	client := bybit.NewBybitHttpClient(
 		config.ApiKey,
@@ -275,7 +306,7 @@ type PositionsHistoryBybit struct {
 	TimeInPosition    int64   `json:"timeInPosition"`
 }
 
-func TransformClosePnlEntries(entries []ClosePnlEntry) []PositionsHistoryBybit {
+func TransformClosePnlEntries(entries []ClosePnlEntry, accountCredentialsBlock string) []PositionsHistoryBybit {
 	var transformedEntries []PositionsHistoryBybit
 
 	for _, entry := range entries {
@@ -316,7 +347,7 @@ func TransformClosePnlEntries(entries []ClosePnlEntry) []PositionsHistoryBybit {
 			Profit:            closedPnl,
 			CurrencyIn:        currencyIn,
 			CurrencyFrom:      currencyFrom,
-			Fee:               GetTradeFeeByOrderID(entry.OrderId),
+			Fee:               GetTradeFeeByOrderID(entry.OrderId, accountCredentialsBlock),
 			Volume:            volume,
 			TimeInPosition:    timeInPosition,
 		})
@@ -325,8 +356,8 @@ func TransformClosePnlEntries(entries []ClosePnlEntry) []PositionsHistoryBybit {
 	return transformedEntries
 }
 
-func GetWalletPositionsHistoryBybit() []PositionsHistoryBybit {
-	config, _ := LoadBybitCredentials("config.toml")
+func GetWalletPositionsHistoryBybit(accountCredentialsBlock string) []PositionsHistoryBybit {
+	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
 
 	client := bybit.NewBybitHttpClient(
 		config.ApiKey,
@@ -355,7 +386,7 @@ func GetWalletPositionsHistoryBybit() []PositionsHistoryBybit {
 		fmt.Printf("Error parsing JSON: %v\n", err)
 	}
 
-	positionsHistoryBybit := TransformClosePnlEntries(input.Result.List)
+	positionsHistoryBybit := TransformClosePnlEntries(input.Result.List, accountCredentialsBlock)
 
 	// for _, entry := range positionsHistoryBybit {
 	// 	fmt.Println(entry.OpenPositionTime, entry.ClosePositionTime, entry.ClosePrice, entry.OpenPrice, entry.Leverage, entry.PositionMode, entry.PositionSide, entry.Profit, entry.CurrencyIn, entry.CurrencyFrom, entry.Fee, entry.Volume, entry.TimeInPosition)

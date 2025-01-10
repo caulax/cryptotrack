@@ -13,13 +13,19 @@ func UpdateBalance(timing string) {
 
 	fmt.Println("[INFO] Started getting balances from exchanges")
 
+	balanceBinance := exchange.GetWalletBalanceBinance("binance")
+	for _, balance := range balanceBinance {
+		dto.CreateNewBalance(balance.Currency, balance.Balance, balance.BalanceUSDT, 1, updateTime, timing)
+	}
+	fmt.Println("[INFO] Binance Balance: ", balanceBinance)
+
 	balanceOkx := exchange.GetWalletBalanceOkx("okx")
 	for _, balance := range balanceOkx {
 		dto.CreateNewBalance(balance.Currency, balance.Balance, balance.BalanceUSDT, 2, updateTime, timing)
 	}
 	fmt.Println("[INFO] OKX Balance: ", balanceOkx)
 
-	balanceBybit := exchange.GetWalletBalanceBybit()
+	balanceBybit := exchange.GetWalletBalanceBybit("bybit")
 	for _, balance := range balanceBybit {
 		dto.CreateNewBalance(balance.Currency, balance.Balance, balance.BalanceUSDT, 4, updateTime, timing)
 	}
@@ -36,6 +42,12 @@ func UpdateBalance(timing string) {
 		dto.CreateNewBalance(balance.Currency, balance.Balance, balance.BalanceUSDT, 6, updateTime, timing)
 	}
 	fmt.Println("[INFO] V-OKX Balance: ", balanceOkxV)
+
+	balanceBybitV := exchange.GetWalletBalanceBybit("v-bybit")
+	for _, balance := range balanceBybitV {
+		dto.CreateNewBalance(balance.Currency, balance.Balance, balance.BalanceUSDT, 7, updateTime, timing)
+	}
+	fmt.Println("[INFO] V-Bybit Balance: ", balanceBybitV)
 
 	current_time := time.Now().Local()
 	dto.UpdateMetricLastUpdateBalance(current_time.Format("2006-01-02 15:04:05"))

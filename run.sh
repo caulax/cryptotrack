@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# take new version
+git pull
+
 # build
 docker build -t cryptotrack .
 

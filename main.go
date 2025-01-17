@@ -374,7 +374,7 @@ func main() {
 	case "migrations":
 		db.InitMigrations()
 	// case "test":
-	// 	fmt.Println(exchange.GetWalletBalanceBinance("binance"))
+	// 	exchange.GetWalletBalanceGateio()
 	default:
 		fmt.Println("Invalid mode. Use 'server' or 'update'.")
 		os.Exit(1)

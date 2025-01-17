@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	bybit "github.com/wuhewuhe/bybit.go.api"
@@ -228,6 +229,13 @@ func GetWalletBalanceBybit(accountCredentialsBlock string) []AccountBalanceResul
 	return balanceRes
 }
 
+func GetCurrentTime() int64 {
+	now := time.Now()
+	unixNano := now.UnixNano()
+	timeStamp := unixNano / int64(time.Millisecond)
+	return timeStamp
+}
+
 // Trade execution response struct
 type TradeExecution struct {
 	OrderID  string  `json:"orderId"`
@@ -395,3 +403,44 @@ func GetWalletPositionsHistoryBybit(accountCredentialsBlock string) []PositionsH
 	return positionsHistoryBybit
 
 }
+
+// todo: rewrite bybit api to http lib, without github.com/wuhewuhe/bybit.go.api
+// func GetEarnWalletBalanceBybit(accountCredentialsBlock string) {
+// 	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
+
+// 	req, _ := http.NewRequest("GET", "https://api.bybit.com"+"/v5/broker/earnings-info", nil)
+
+// 	recvWindow := "5000"
+
+// 	timeStamp := GetCurrentTime()
+
+// 	signatureBase := []byte(strconv.FormatInt(timeStamp, 10) + config.ApiKey + recvWindow)
+// 	hmac256 := hmac.New(sha256.New, []byte(config.SecretKey))
+// 	hmac256.Write(signatureBase)
+// 	signature := hex.EncodeToString(hmac256.Sum(nil))
+
+// 	req.Header.Add("X-BAPI-SIGN", signature)
+// 	req.Header.Add("X-BAPI-SIGN-TYPE", "2")
+// 	req.Header.Add("X-BAPI-API-KEY", config.ApiKey)
+// 	req.Header.Add("X-BAPI-TIMESTAMP", strconv.FormatInt(timeStamp, 10))
+// 	req.Header.Add("X-BAPI-RECV-WINDOW", recvWindow)
+// 	req.Header.Add("User-Agent", fmt.Sprintf("%s/%s", "bybit.api.go", "1.0.4"))
+
+// 	client := &http.Client{}
+// 	resp, err := client.Do(req)
+// 	if err != nil {
+// 		fmt.Println("Error making request:", err)
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Read and print the response
+// 	body, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		fmt.Println("Error reading response body:", err)
+// 		return
+// 	}
+
+// 	fmt.Println("Response Status:", resp.Status)
+// 	fmt.Println("Response Body:", string(body))
+// }

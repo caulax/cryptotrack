@@ -25,6 +25,7 @@ const (
 	methodGateio             = "GET"
 	urlPathSpotGateio        = "/spot/accounts"
 	urlPathFuturesUSDTGateio = "/futures/usdt/accounts"
+	urlPathEarnGateio        = "/earn/uni/lends"
 )
 
 type GateioCredentials struct {
@@ -108,6 +109,11 @@ type AccountBalanceResultGateio struct {
 
 type ResponseFutures struct {
 	Total string `json:"total"`
+}
+
+type ResponseEarn struct {
+	Currency string `json:"currency"`
+	Amount   string `json:"amount"`
 }
 
 func updateBalanceGateio(balanceRes *[]AccountBalanceResultGateio, currency string, newBalance float64, newBalanceUSDT float64) {
@@ -240,6 +246,30 @@ func GetWalletBalanceGateio() []AccountBalanceResultGateio {
 		currencyBalanceUSDT,
 		currencyBalanceUSDT,
 	)
+
+	// make earn query
+	respEarn := makeQueryGateio(urlPathEarnGateio)
+	bodyEarn, err := io.ReadAll(respEarn.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+	}
+
+	var resultEarn []ResponseEarn
+	if err := json.Unmarshal(bodyEarn, &resultEarn); err != nil {
+		fmt.Println("Error parsing JSON:", err)
+	}
+
+	respEarn.Body.Close()
+
+	for _, res := range resultEarn {
+		resAmount, _ := strconv.ParseFloat(strings.TrimSpace(res.Amount), 64)
+		updateBalanceGateio(
+			&accountBalanceResult,
+			"USDT",
+			resAmount,
+			resAmount,
+		)
+	}
 
 	return accountBalanceResult
 }

@@ -113,7 +113,8 @@ func GetCoinPriceOkx(coinName string) float64 {
 
 	// Check if the response contains data
 	if len(okxResponse.Data) == 0 {
-		fmt.Println(coinName, "No data found in the response.")
+		fmt.Println("[INFO] OKX. No data found in the response. Coin name: ", coinName)
+		return 0.0
 	}
 
 	// Get the latest price of BTC

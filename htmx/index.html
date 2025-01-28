@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <title>Crypto Track</title>
@@ -36,6 +37,7 @@
                 font-size: 10px;
             }
         </style>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
         <div class="container">
@@ -96,6 +98,7 @@
                         </tbody>
                     {{ end }}
                 </table>
+                <canvas id="balanceChart" width="400" height="200"></canvas>
             </div>
 
             <div hx-ext="ws" ws-connect="ws://:8080/ws">
@@ -249,8 +252,134 @@
             </div>
         </div>
     </body>
+    <script>
+        // Parse the JSON data passed from the Go backend
+        var balances = {{ .AllTimeDailyBalances }};
 
-    <script src="static/htmx.min.js"></script>
-    <script src="static/ws.js"></script>
+        // Group balances by ExchangeName
+        var exchanges = {};
+        balances.forEach(function(item) {
+            if (!exchanges[item.ExchangeName]) {
+                exchanges[item.ExchangeName] = [];
+            }
+            exchanges[item.ExchangeName].push(item);
+        });
+
+        // Extract unique dates for the X-axis labels
+        var labels = [...new Set(balances.map(item => new Date(item.Date).toLocaleDateString()))];
+
+        // Create datasets for each exchange
+        var datasets = [];
+        var colors = [
+            { border: '#36a2eb', background: '#36a2eb' },
+            { border: '#ff6384', background: '#ff6384' },
+            { border: '#ff9f40', background: '#ff9f40' },
+            { border: '#ffcd56', background: '#ffcd56' },
+            { border: '#4bc0c0', background: '#4bc0c0' },
+            { border: '#9966ff', background: '#9966ff' }
+        ];
+        var colorIndex = 0;
+
+        for (var exchange in exchanges) {
+            var exchangeData = exchanges[exchange];
+            var data = labels.map(function(label) {
+                var match = exchangeData.find(item => new Date(item.Date).toLocaleDateString() === label);
+                return match ? match.BalanceUSDT : null;
+            });
+
+            datasets.push({
+                label: exchange,
+                data: data,
+                borderColor: colors[colorIndex].border,
+                backgroundColor: colors[colorIndex].background,
+                borderWidth: 2,
+                fill: false,
+                pointStyle: false,
+            });
+
+            colorIndex = (colorIndex + 1) % colors.length;
+        }
+
+        // Vertical Line Plugin
+        const verticalLinePlugin = {
+            id: 'verticalLine',
+            afterDraw: function(chart) {
+                if (chart.tooltip?._active?.length) {
+                    const ctx = chart.ctx;
+                    const x = chart.tooltip._active[0].element.x;
+                    const topY = chart.scales.y.top;
+                    const bottomY = chart.scales.y.bottom;
+
+                    // Draw the vertical line
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(x, topY);
+                    ctx.lineTo(x, bottomY);
+                    ctx.lineWidth = 0.5;
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        };
+
+        // Create the chart
+        var ctx = document.getElementById('balanceChart').getContext('2d');
+        var balanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Balance (USDT)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) { // Only process for the first dataset
+                                    var date = context.label;
+                                    var tooltipText = [];
+
+                                    datasets.forEach(function(dataset) {
+                                        var value = dataset.data[context.dataIndex];
+                                        if (value !== null) {
+                                            tooltipText.push(`${dataset.label}: ${value.toFixed(2)} USDT`);
+                                        }
+                                    });
+
+                                    return tooltipText;
+                                }
+                                return null; // Skip for other datasets to avoid duplication
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [verticalLinePlugin] // Add the vertical line plugin
+        });
+    </script>
+
+
+    <!-- <script src="static/htmx.min.js"></script>
+    <script src="static/ws.js"></script> -->
     <script src="static/bootstrap.bundle.min.js"></script>
 </html>

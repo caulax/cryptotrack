@@ -56,6 +56,7 @@ func GetLatestOverallBalanceByTiming(timing string) []BalanceOverall {
 		) as maxDate
 	JOIN exchanges as e ON e.id = maxDate.exchangeId
 	GROUP BY maxDate.date, maxDate.exchangeId
+	ORDER BY balanceUSDT DESC
 	`, timing)
 
 	balances := []BalanceOverall{}
@@ -88,6 +89,7 @@ func GetLatestBalanceByTiming(timing string) []BalanceByCoin {
 		WHERE date = (SELECT MAX(date) FROM balances WHERE timing = ?)
 		) as maxDate
 	JOIN exchanges AS e ON e.id = maxDate.exchangeId
+	ORDER BY BalanceUSDT DESC
 	`, timing)
 
 	balances := []BalanceByCoin{}
@@ -127,4 +129,30 @@ func DeleteBalanceByDate(date time.Time) {
 
 	fmt.Printf("Deleted %d rows older than 30 days.\n", rowsAffected)
 
+}
+
+func GetAllTimeDailyBalance() []BalanceOverall {
+	database, _ := db.GetSQLiteDBConnection("./db.sqlite3")
+	defer database.Close()
+
+	result, _ := database.Query(`
+		SELECT
+			e.name as exchangeName,
+			date,
+			SUM(balanceUSDT)
+		FROM balances
+		JOIN exchanges AS e ON exchangeId = e.id
+		WHERE timing = 'daily'
+		GROUP BY exchangeId, date
+		ORDER BY date ASC;
+	`)
+
+	balances := []BalanceOverall{}
+	for result.Next() {
+		var bal BalanceOverall
+		result.Scan(&bal.ExchangeName, &bal.Date, &bal.BalanceUSDT)
+		balances = append(balances, bal)
+	}
+
+	return balances
 }

@@ -6,6 +6,7 @@ import (
 	"cryptotrack/dto"
 	"cryptotrack/service"
 	"cryptotrack/update"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -37,6 +38,7 @@ type Variables struct {
 	TimeAlert                  bool
 	LastUpdateBalance          time.Duration
 	TimeAlertBalance           bool
+	AllTimeDailyBalances       template.JS
 }
 
 type VariablesCoin struct {
@@ -116,7 +118,10 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 	tableData := service.GetOverallInformation()
 	fmt.Printf("[INFO] GetOverallInformation TIME: %v\n", time.Since(start))
 
-	fmt.Println("[INFO] Overall Info:", tableData)
+	// fmt.Println("[INFO] Overall Info:", tableData)
+
+	allTimeDailyBalances := dto.GetAllTimeDailyBalance()
+	allTimeDailyBalancesJSON, _ := json.Marshal(allTimeDailyBalances)
 
 	v := Variables{
 		TableData:                  tableData,
@@ -126,6 +131,7 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 		TimeAlert:                  timeAlert,
 		LastUpdateBalance:          diffBalance,
 		TimeAlertBalance:           timeAlertBalance,
+		AllTimeDailyBalances:       template.JS(allTimeDailyBalancesJSON),
 	}
 
 	err = t.Execute(w, &v)
@@ -338,13 +344,13 @@ func NewServer() *server {
 	return s
 }
 
-func (s *server) broadcast(msg []byte) {
-	s.subscriberMutex.Lock()
-	for subscriber := range s.subscribers {
-		subscriber.msgs <- msg
-	}
-	s.subscriberMutex.Unlock()
-}
+// func (s *server) broadcast(msg []byte) {
+// 	s.subscriberMutex.Lock()
+// 	for subscriber := range s.subscribers {
+// 		subscriber.msgs <- msg
+// 	}
+// 	s.subscriberMutex.Unlock()
+// }
 
 func main() {
 

@@ -1,10 +1,14 @@
 FROM golang:1.23-alpine3.20 AS backend
 
-ADD . /build
+RUN apk add --no-cache gcc musl-dev
+
 WORKDIR /build
 
-RUN apk add --no-cache gcc musl-dev
-ENV CGO_ENABLED=1
+COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
 
 RUN go build -o /build/cryptotrack
 

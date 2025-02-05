@@ -2,10 +2,14 @@ package exchange
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -16,7 +20,8 @@ import (
 )
 
 const (
-	bybitApiUrl = "https://api.bybit.com/v5/market/tickers?category=spot&symbol=%sUSDT" // BTCUSDT
+	bybitApiUrlBase = "https://api.bybit.com/v5/"
+	bybitApiUrl     = "https://api.bybit.com/v5/market/tickers?category=spot&symbol=%sUSDT" // BTCUSDT
 )
 
 type BybitCredentials struct {
@@ -165,65 +170,131 @@ func updateBalanceBybit(balanceRes *[]AccountBalanceResultBybit, currency string
 	})
 }
 
-func GetWalletBalanceBybit(accountCredentialsBlock string) []AccountBalanceResultBybit {
+type BybitResponseWalletBalanceUnified struct {
+	Result struct {
+		List []struct {
+			Coin []CoinWalletBalanceUnified `json:"coin"`
+		} `json:"list"`
+	} `json:"result"`
+}
+
+type CoinWalletBalanceUnified struct {
+	UsdValue      string `json:"usdValue"`
+	WalletBalance string `json:"walletBalance"`
+	Coin          string `json:"coin"`
+}
+
+type BybitResponseWalletBalanceFunding struct {
+	Result struct {
+		Balance []BalanceWalletBalanceFunding `json:"balance"`
+	} `json:"result"`
+}
+
+type BalanceWalletBalanceFunding struct {
+	Coin          string `json:"coin"`
+	WalletBalance string `json:"walletBalance"`
+}
+
+func getRequestBybit(endpoint, accountCredentialsBlock string, params url.Values) (*http.Response, error) {
 	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
 
-	client := bybit.NewBybitHttpClient(config.ApiKey, config.SecretKey, bybit.WithBaseURL(bybit.MAINNET))
+	fullUrlWalletBalance := fmt.Sprintf("%s%s?%s", bybitApiUrlBase, endpoint, params.Encode())
+	req, _ := http.NewRequest("GET", fullUrlWalletBalance, nil)
 
-	paramsUnifiedAccount := map[string]interface{}{"accountType": "UNIFIED"}
-	accountResultUnified, _ := client.NewUtaBybitServiceWithParams(paramsUnifiedAccount).GetAccountWallet(context.Background())
+	recvWindow := "5000"
+
+	timeStamp := GetCurrentTime()
+
+	signatureBase := []byte(strconv.FormatInt(timeStamp, 10) + config.ApiKey + recvWindow + params.Encode())
+	hmac256 := hmac.New(sha256.New, []byte(config.SecretKey))
+	hmac256.Write(signatureBase)
+	signature := hex.EncodeToString(hmac256.Sum(nil))
+
+	req.Header.Add("X-BAPI-SIGN", signature)
+	req.Header.Add("X-BAPI-SIGN-TYPE", "2")
+	req.Header.Add("X-BAPI-API-KEY", config.ApiKey)
+	req.Header.Add("X-BAPI-TIMESTAMP", strconv.FormatInt(timeStamp, 10))
+	req.Header.Add("X-BAPI-RECV-WINDOW", recvWindow)
+	req.Header.Add("User-Agent", fmt.Sprintf("%s/%s", "bybit.api.go", "1.0.4"))
+
+	client := &http.Client{}
+	return client.Do(req)
+}
+
+func GetWalletBalanceBybit(accountCredentialsBlock string) []AccountBalanceResultBybit {
+
+	// Get data from Unified account
+	paramsWalletBalance := url.Values{}
+	paramsWalletBalance.Add("accountType", "UNIFIED")
+
+	endpointWalletBalance := "/account/wallet-balance"
+	resp, err := getRequestBybit(endpointWalletBalance, accountCredentialsBlock, paramsWalletBalance)
+	if err != nil {
+		fmt.Println("Error fetching trading balance:", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+	}
+
+	var response BybitResponseWalletBalanceUnified
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Println("Error decoding JSON:", err)
+	}
 
 	var balanceRes []AccountBalanceResultBybit
 
-	if resultSlice, ok := accountResultUnified.Result.(map[string]interface{}); ok {
-		if list, ok := resultSlice["list"].([]interface{}); ok {
-			for _, account := range list {
-				if accountMap, ok := account.(map[string]interface{}); ok {
-					if coins, ok := accountMap["coin"].([]interface{}); ok {
-						for _, coin := range coins {
-							if coinMap, ok := coin.(map[string]interface{}); ok {
-								usdValueStr, _ := coinMap["usdValue"].(string)
-								usdValueFloat, _ := strconv.ParseFloat(usdValueStr, 64)
-								if usdValueFloat > 0.1 {
-
-									walletBalanceStr, _ := coinMap["walletBalance"].(string)
-									walletBalanceFloat, _ := strconv.ParseFloat(walletBalanceStr, 64)
-
-									updateBalanceBybit(&balanceRes, coinMap["coin"].(string), walletBalanceFloat, usdValueFloat)
-								}
-							}
-						}
-					}
-				}
+	// Print the extracted coin data
+	for _, item := range response.Result.List {
+		for _, coin := range item.Coin {
+			usdValueFloat, _ := strconv.ParseFloat(coin.UsdValue, 64)
+			if usdValueFloat > 0.1 {
+				coinWalletBalance, _ := strconv.ParseFloat(coin.WalletBalance, 64)
+				updateBalanceBybit(&balanceRes, coin.Coin, coinWalletBalance, usdValueFloat)
 			}
 		}
 	}
 
-	paramsFundAccount := map[string]interface{}{"accountType": "FUND"}
-	accountResultFund, _ := client.NewUtaBybitServiceWithParams(paramsFundAccount).GetAllCoinsBalance(context.Background())
+	// Get data from Funding account
+	paramsFundingBalance := url.Values{}
+	paramsFundingBalance.Add("accountType", "FUND")
 
-	if resultSlice, ok := accountResultFund.Result.(map[string]interface{}); ok {
-		if list, ok := resultSlice["balance"].([]interface{}); ok {
-			for _, account := range list {
+	endpointFundingBalance := "/asset/transfer/query-account-coins-balance"
 
-				if accountMap, ok := account.(map[string]interface{}); ok {
+	respFunding, err := getRequestBybit(endpointFundingBalance, accountCredentialsBlock, paramsFundingBalance)
+	if err != nil {
+		fmt.Println("Error fetching trading balance:", err)
+	}
+	defer respFunding.Body.Close()
 
-					currency := accountMap["coin"].(string)
-					walletBalanceStr, _ := accountMap["walletBalance"].(string)
-					walletBalanceFloat, _ := strconv.ParseFloat(walletBalanceStr, 64)
+	bodyFunding, err := io.ReadAll(respFunding.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+	}
 
-					if currency == "USDT" {
-						updateBalanceBybit(&balanceRes, currency, walletBalanceFloat, walletBalanceFloat)
-					} else {
-						coinPrice := GetCoinPriceBybit(currency)
-						balanceUSDT := walletBalanceFloat * coinPrice
-						if balanceUSDT > 0.1 {
-							updateBalanceBybit(&balanceRes, currency, walletBalanceFloat, balanceUSDT)
-						}
-					}
-				}
+	var responseFunding BybitResponseWalletBalanceFunding
+	err = json.Unmarshal(bodyFunding, &responseFunding)
+	if err != nil {
+		fmt.Println("Error decoding JSON:", err)
+	}
+
+	for _, balance := range responseFunding.Result.Balance {
+
+		walletBalanceFloat, _ := strconv.ParseFloat(balance.WalletBalance, 64)
+		if balance.Coin == "USDT" {
+			updateBalanceBybit(&balanceRes, balance.Coin, walletBalanceFloat, walletBalanceFloat)
+		} else {
+			coinPrice := GetCoinPriceBybit(balance.Coin)
+			balanceUSDT := walletBalanceFloat * coinPrice
+			if balanceUSDT > 0.1 {
+				updateBalanceBybit(&balanceRes, balance.Coin, walletBalanceFloat, balanceUSDT)
+				fmt.Printf("Coin: %s, Wallet Balance: %f, balances: %f\n", balance.Coin, walletBalanceFloat, balanceUSDT)
 			}
 		}
+
 	}
 
 	return balanceRes
@@ -403,44 +474,3 @@ func GetWalletPositionsHistoryBybit(accountCredentialsBlock string) []PositionsH
 	return positionsHistoryBybit
 
 }
-
-// todo: rewrite bybit api to http lib, without github.com/wuhewuhe/bybit.go.api
-// func GetEarnWalletBalanceBybit(accountCredentialsBlock string) {
-// 	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
-
-// 	req, _ := http.NewRequest("GET", "https://api.bybit.com"+"/v5/broker/earnings-info", nil)
-
-// 	recvWindow := "5000"
-
-// 	timeStamp := GetCurrentTime()
-
-// 	signatureBase := []byte(strconv.FormatInt(timeStamp, 10) + config.ApiKey + recvWindow)
-// 	hmac256 := hmac.New(sha256.New, []byte(config.SecretKey))
-// 	hmac256.Write(signatureBase)
-// 	signature := hex.EncodeToString(hmac256.Sum(nil))
-
-// 	req.Header.Add("X-BAPI-SIGN", signature)
-// 	req.Header.Add("X-BAPI-SIGN-TYPE", "2")
-// 	req.Header.Add("X-BAPI-API-KEY", config.ApiKey)
-// 	req.Header.Add("X-BAPI-TIMESTAMP", strconv.FormatInt(timeStamp, 10))
-// 	req.Header.Add("X-BAPI-RECV-WINDOW", recvWindow)
-// 	req.Header.Add("User-Agent", fmt.Sprintf("%s/%s", "bybit.api.go", "1.0.4"))
-
-// 	client := &http.Client{}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		fmt.Println("Error making request:", err)
-// 		return
-// 	}
-// 	defer resp.Body.Close()
-
-// 	// Read and print the response
-// 	body, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		fmt.Println("Error reading response body:", err)
-// 		return
-// 	}
-
-// 	fmt.Println("Response Status:", resp.Status)
-// 	fmt.Println("Response Body:", string(body))
-// }

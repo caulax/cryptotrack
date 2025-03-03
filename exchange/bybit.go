@@ -195,6 +195,17 @@ type BalanceWalletBalanceFunding struct {
 	WalletBalance string `json:"walletBalance"`
 }
 
+type BybitResponseWalletBalanceEarn struct {
+	Result struct {
+		List []BalanceWalletBalanceEarn `json:"list"`
+	} `json:"result"`
+}
+
+type BalanceWalletBalanceEarn struct {
+	Coin   string `json:"coin"`
+	Amount string `json:"amount"`
+}
+
 func getRequestBybit(endpoint, accountCredentialsBlock string, params url.Values) (*http.Response, error) {
 	config, _ := LoadBybitCredentials("config.toml", accountCredentialsBlock)
 
@@ -294,7 +305,44 @@ func GetWalletBalanceBybit(accountCredentialsBlock string) []AccountBalanceResul
 				fmt.Printf("Coin: %s, Wallet Balance: %f, balances: %f\n", balance.Coin, walletBalanceFloat, balanceUSDT)
 			}
 		}
+	}
 
+	// Get data from Earn account
+	paramsEarnWalletBalance := url.Values{}
+	paramsEarnWalletBalance.Add("category", "FlexibleSaving")
+
+	endpointEarnWalletBalance := "/earn/position"
+	respEarn, err := getRequestBybit(endpointEarnWalletBalance, accountCredentialsBlock, paramsEarnWalletBalance)
+	if err != nil {
+		fmt.Println("Error fetching trading balance:", err)
+	}
+	defer respEarn.Body.Close()
+
+	bodyEarn, err := io.ReadAll(respEarn.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+	}
+
+	var responseEarn BybitResponseWalletBalanceEarn
+	err = json.Unmarshal(bodyEarn, &responseEarn)
+	if err != nil {
+		fmt.Println("Error decoding JSON:", err)
+	}
+
+	// Print the extracted coin data
+	for _, coin := range responseEarn.Result.List {
+		walletEarnBalanceFloat, _ := strconv.ParseFloat(coin.Amount, 64)
+		if coin.Coin == "USDT" {
+			updateBalanceBybit(&balanceRes, coin.Coin, walletEarnBalanceFloat, walletEarnBalanceFloat)
+			fmt.Printf("Coin: %s, Earn Wallet Balance: %f, balances: %f\n", coin.Coin, walletEarnBalanceFloat, walletEarnBalanceFloat)
+		} else {
+			coinPrice := GetCoinPriceBybit(coin.Coin)
+			balanceUSDT := walletEarnBalanceFloat * coinPrice
+			if balanceUSDT > 0.1 {
+				updateBalanceBybit(&balanceRes, coin.Coin, walletEarnBalanceFloat, balanceUSDT)
+				fmt.Printf("Coin: %s, Earn Wallet Balance: %f, balances: %f\n", coin.Coin, walletEarnBalanceFloat, balanceUSDT)
+			}
+		}
 	}
 
 	return balanceRes
